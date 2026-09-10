@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LootSniper - Global Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --bg: #0f172a; --panel: #1e293b; --accent: #10b981; --accent-hover: #059669; --text: #f8fafc; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --versus: #6366f1; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+        
+        .sidebar { width: 320px; background: var(--panel); padding: 25px; display: flex; flex-direction: column; gap: 20px; border-right: 1px solid #334155; }
+        .logo { font-size: 26px; font-weight: 900; color: var(--accent); display: flex; align-items: center; gap: 10px; }
+        
+        .btn-scan { background: var(--accent); color: white; border: none; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .btn-scan:hover { background: var(--accent-hover); transform: translateY(-2px); }
+        
+        .status-box { background: #0f172a; padding: 15px; border-radius: 8px; font-size: 13px; color: #94a3b8; border: 1px solid #334155; }
+        
+        .main { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; }
+        .header { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .sort-select { background: var(--panel); color: white; border: 1px solid #334155; padding: 10px 15px; border-radius: 8px; font-weight: bold; font-size: 14px; outline: none; cursor: pointer; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 25px; }
+        .card { background: var(--panel); border-radius: 12px; overflow: hidden; border: 1px solid #334155; transition: 0.3s; display: flex; flex-direction: column; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-color: var(--accent); }
+        
+        .card-header { padding: 15px; border-bottom: 1px solid #334155; display: flex; flex-direction: column; gap: 5px; }
+        .card-title { font-size: 15px; font-weight: bold; line-height: 1.4; color: #e2e8f0; }
+        .platform-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; align-self: flex-start; }
+        .vinted { background: #007782; } .ebay { background: #e53238; } .subito { background: #ff4a3d; }
+        
+        .vs-score { margin-top: 5px; font-size: 12px; font-weight: bold; color: #a5b4fc; display: flex; align-items: center; gap: 5px; }
+        .vs-bar { height: 6px; background: #334155; border-radius: 3px; flex: 1; overflow: hidden; }
+        .vs-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6); }
+        
+        .card-body { padding: 15px; flex: 1; display: flex; flex-direction: column; gap: 15px; }
+        .prices { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent); }
+        .req-price { font-size: 24px; font-weight: 900; color: var(--success); }
+        .est-price { text-align: right; }
+        .est-price span { display: block; font-size: 11px; color: #94a3b8; }
+        .est-price strong { font-size: 18px; color: var(--warning); text-decoration: line-through; }
+        
+        .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+        .tag { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .t-gpu { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; }
+        .t-up { background: rgba(56, 189, 248, 0.2); color: #7dd3fc; }
+        .t-down { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        
+        .card-footer { padding: 15px; background: #0f172a; border-top: 1px solid #334155; display: flex; gap: 10px;}
+        .btn-link { flex: 1; text-align: center; background: #334155; color: white; text-decoration: none; padding: 10px; border-radius: 6px; font-weight: bold; transition: 0.2s; font-size: 13px;}
+        .btn-link:hover { background: var(--accent); }
+        .btn-delete { background: #ef4444; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;}
+        .btn-delete:hover { background: #dc2626; }
+        .date-badge { font-size: 10px; color: #64748b; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo">🎯 LootSniper</div>
+        <p style="font-size: 13px; color: #94a3b8;">Dashboard Live connessa a Supabase. Il tuo server LXC lavora in background.</p>
+        
+        <button class="btn-scan" id="btn-sync" onclick="loadDeals()">
+            🔄 Sincronizza Database
+        </button>
+
+        <div class="status-box">
+            <p>🟢 <b>Stato:</b> Connesso al Cloud</p>
+            <p>📦 <b>Bombe in DB:</b> <span id="count-bombs">0</span></p>
+            <p style="font-size: 11px; margin-top: 10px; color: #64748b;">Ultimo sync: <span id="last-sync">-</span></p>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <h1 style="font-size: 24px;">Mercato Attuale</h1>
+            <select class="sort-select" id="sort-order" onchange="renderCards()">
+                <option value="margin">🔥 Ordina per Sconto Maggiore</option>
+                <option value="price-asc">💶 Prezzo Crescente</option>
+                <option value="date">🕒 Ultimi Aggiunti</option>
+                <option value="vs">⚡ Maggiore Potenza (VS)</option>
+            </select>
+        </div>
+        
+        <div class="grid" id="results-grid"></div>
+    </div>
+
+    <script>
+        // INSERISCI QUI LE TUE CHIAVI SUPABASE!
+        const SUPABASE_URL = 'URL_SUPABASE';
+        const SUPABASE_KEY = 'CHIAVE_SUPABASE';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let dealsData = [];
+
+        async function loadDeals() {
+            document.getElementById('btn-sync').innerText = "Sincronizzazione...";
+            
+            // Scarica tutti gli affari dal database
+            const { data, error } = await supabase.from('lootsniper_deals').select('*').order('created_at', { ascending: false });
+            
+            if (error) {
+                alert("Errore DB: " + error.message);
+            } else {
+                dealsData = data;
+                document.getElementById('count-bombs').innerText = data.length;
+                document.getElementById('last-sync').innerText = new Date().toLocaleTimeString();
+                renderCards();
+            }
+            document.getElementById('btn-sync').innerText = "🔄 Sincronizza Database";
+        }
+
+        async function deleteDeal(id) {
+            if(confirm("Vuoi davvero scartare questo annuncio? Verrà eliminato dal database.")) {
+                await supabase.from('lootsniper_deals').delete().eq('id', id);
+                loadDeals(); // Ricarica la griglia
+            }
+        }
+
+        function renderCards() {
+            const grid = document.getElementById('results-grid');
+            grid.innerHTML = ""; 
+            
+            const sortVal = document.getElementById('sort-order').value;
+            let sorted = [...dealsData]; 
+            
+            if (sortVal === 'margin') sorted.sort((a, b) => b.margine - a.margine);
+            else if (sortVal === 'price-asc') sorted.sort((a, b) => a.prezzo - b.prezzo);
+            else if (sortVal === 'date') sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            else if (sortVal === 'vs') sorted.sort((a, b) => b.vs_score - a.vs_score);
+
+            sorted.forEach(item => {
+                // Genera le etichette HTML dai tag salvati nel DB
+                let tagsHtml = "";
+                if(item.tags) {
+                    tagsHtml = item.tags.map(t => `<span class="tag ${t.cls}">${t.text}</span>`).join('');
+                }
+                
+                const dataInserimento = new Date(item.created_at).toLocaleString();
+
+                const cardHtml = `
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="platform-badge ${item.piattaforma.toLowerCase()}">${item.piattaforma}</span>
+                            <div class="card-title">${item.titolo.substring(0, 65)}...</div>
+                            <div class="vs-score">
+                                <span>VS Power: ${item.vs_score || 0}/100</span>
+                                <div class="vs-bar"><div class="vs-fill" style="width: ${item.vs_score || 0}%"></div></div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="tags">${tagsHtml}</div>
+                            <div class="prices">
+                                <div><span style="font-size: 11px; color: #94a3b8;">RICHIESTA</span><br><span class="req-price">${item.prezzo}€</span></div>
+                                <div class="est-price">
+                                    <span>VALORE REALE</span><strong>${item.stima}€</strong>
+                                    <span style="color:var(--success); font-weight:bold; margin-top:2px;">Margine ${item.margine}€</span>
+                                </div>
+                            </div>
+                            <div class="date-badge">Trovato il: ${dataInserimento}</div>
+                        </div>
+                        <div class="card-footer">
+                            <a href="${item.url}" target="_blank" class="btn-link">Apri Annuncio ➔</a>
+                            <button class="btn-delete" onclick="deleteDeal('${item.id}')">🗑️</button>
+                        </div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', cardHtml);
+            });
+        }
+
+        // Carica i dati appena apri il sito
+        window.onload = loadDeals;
+    </script>
+</body>
+</html>
