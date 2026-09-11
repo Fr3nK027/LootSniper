@@ -8,236 +8,179 @@
     <style>
         :root { --bg: #0f172a; --panel: #1e293b; --accent: #10b981; --accent-hover: #059669; --text: #f8fafc; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-        body { background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        body { background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
         
-        /* HEADER MOBILE-FRIENDLY */
-        .topbar { background: var(--panel); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; z-index: 10; }
-        .logo { font-size: 22px; font-weight: 900; color: var(--accent); display: flex; align-items: center; gap: 8px; }
-        .nav-tabs { display: flex; gap: 10px; }
-        .tab-btn { background: transparent; color: #94a3b8; border: none; padding: 8px 15px; font-size: 14px; font-weight: bold; cursor: pointer; border-radius: 6px; transition: 0.2s; }
-        .tab-btn.active { background: #334155; color: white; }
+        .sidebar { width: 340px; background: var(--panel); padding: 25px; display: flex; flex-direction: column; gap: 20px; border-right: 1px solid #334155; overflow-y: auto; }
+        .logo { font-size: 26px; font-weight: 900; color: var(--accent); display: flex; align-items: center; gap: 10px; margin-bottom: 10px;}
         
-        /* LAYOUT PRINCIPALE */
-        .content-area { flex: 1; overflow-y: auto; padding: 20px; position: relative; }
-        .view-section { display: none; }
-        .view-section.active { display: block; }
+        .btn-sync { background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-sync:hover { background: #2563eb; }
 
-        /* VISTA MERCATO */
-        .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
-        .sort-select { background: var(--panel); color: white; border: 1px solid #334155; padding: 10px; border-radius: 8px; font-weight: bold; outline: none; }
-        .btn-sync { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .search-box { background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; display: flex; flex-direction: column; gap: 10px; }
+        .search-box label { font-size: 11px; font-weight: bold; color: #94a3b8; text-transform: uppercase; }
+        .search-box input, .search-box select { background: var(--panel); border: 1px solid #334155; color: white; padding: 10px; border-radius: 6px; outline: none; }
+        .btn-add { background: var(--accent); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 5px;}
         
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
-        .card { background: var(--panel); border-radius: 12px; overflow: hidden; border: 1px solid #334155; display: flex; flex-direction: column; }
+        .link-list { display: flex; flex-direction: column; gap: 8px; }
+        .link-item { background: #0f172a; padding: 10px; border-radius: 6px; border: 1px solid #334155; font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .link-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+        .del-btn { color: var(--danger); cursor: pointer; background: none; border: none; font-weight: bold; }
+
+        .main { flex: 1; padding: 30px; overflow-y: auto; }
+        .header { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+        .sort-select { background: var(--panel); color: white; border: 1px solid #334155; padding: 10px 15px; border-radius: 8px; font-weight: bold; outline: none; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+        .card { background: var(--panel); border-radius: 12px; overflow: hidden; border: 1px solid #334155; display: flex; flex-direction: column; transition: 0.2s;}
+        .card:hover { border-color: var(--accent); transform: translateY(-3px);}
         .card-header { padding: 15px; border-bottom: 1px solid #334155; }
         .card-title { font-size: 14px; font-weight: bold; color: #e2e8f0; margin-top: 5px; }
         .platform-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
         .vinted { background: #007782; } .ebay { background: #e53238; } .subito { background: #ff4a3d; }
+        
         .card-body { padding: 15px; flex: 1; }
         .prices { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent); margin-bottom: 10px; }
         .req-price { font-size: 22px; font-weight: 900; color: var(--success); }
         .est-price { text-align: right; }
-        .est-price span { display: block; font-size: 10px; color: #94a3b8; }
         .est-price strong { font-size: 16px; color: var(--warning); text-decoration: line-through; }
-        .tags { display: flex; flex-wrap: wrap; gap: 5px; }
-        .tag { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; background: rgba(56, 189, 248, 0.2); color: #7dd3fc; }
         .card-footer { padding: 15px; display: flex; gap: 10px; background: #0f172a; }
         .btn-link { flex: 1; text-align: center; background: #334155; color: white; text-decoration: none; padding: 10px; border-radius: 6px; font-size: 13px; font-weight: bold; }
-        .btn-delete { background: var(--danger); color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; }
-
-        /* VISTA RICERCHE */
-        .search-form { background: var(--panel); padding: 20px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 20px; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 5px; font-weight: bold; }
-        .form-group input, .form-group select { width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 12px; border-radius: 8px; outline: none; }
-        .btn-add { background: var(--accent); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; }
         
-        .link-list { display: flex; flex-direction: column; gap: 10px; }
-        .link-item { background: var(--panel); padding: 15px; border-radius: 8px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
-        .link-info h4 { color: white; font-size: 14px; margin-bottom: 4px; }
-        .link-info p { color: #94a3b8; font-size: 11px; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        @media (max-width: 600px) {
-            .controls { flex-direction: column; align-items: stretch; }
-            .topbar { padding: 15px; }
-            .logo { font-size: 18px; }
-            .tab-btn { padding: 6px 10px; font-size: 12px; }
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid #334155; max-height: 40vh; }
+            .main { max-height: 60vh; }
         }
     </style>
 </head>
 <body>
 
-    <div class="topbar">
+    <div class="sidebar">
         <div class="logo">🎯 LootSniper</div>
-        <div class="nav-tabs">
-            <button class="tab-btn active" onclick="switchTab('mercato')">Mercato</button>
-            <button class="tab-btn" onclick="switchTab('ricerche')">Ricerche</button>
-        </div>
-    </div>
+        
+        <button class="btn-sync" onclick="loadData()">🔄 Sincronizza Dati</button>
 
-    <div class="content-area">
-        <!-- VISTA MERCATO -->
-        <div id="view-mercato" class="view-section active">
-            <div class="controls">
-                <select class="sort-select" id="sort-order" onchange="renderCards()">
-                    <option value="margin">🔥 Ordina per Sconto</option>
-                    <option value="price-asc">💶 Prezzo Crescente</option>
-                    <option value="date">🕒 Ultimi Trovati</option>
-                </select>
-                <button class="btn-sync" id="btn-sync" onclick="loadDeals()">🔄 Sincronizza (<span id="count-bombs">0</span>)</button>
-            </div>
-            <div class="grid" id="results-grid"></div>
+        <div class="search-box">
+            <h3 style="font-size: 14px; margin-bottom: 5px;">Aggiungi Ricerca</h3>
+            <label>Nome (es. RTX 4060)</label>
+            <input type="text" id="l-nome">
+            <label>Piattaforma</label>
+            <select id="l-plat"><option value="VINTED">Vinted</option><option value="EBAY">eBay</option><option value="SUBITO">Subito</option></select>
+            <label>URL Ricerca</label>
+            <input type="text" id="l-url">
+            <button class="btn-add" onclick="addLink()">➕ Salva sul Server</button>
         </div>
 
-        <!-- VISTA RICERCHE -->
-        <div id="view-ricerche" class="view-section">
-            <div class="search-form">
-                <h3 style="margin-bottom: 15px; color: white;">Aggiungi Nuova Ricerca</h3>
-                <div class="form-group">
-                    <label>Nome (es. Laptop RTX 4080)</label>
-                    <input type="text" id="link-nome" placeholder="Nome identificativo">
-                </div>
-                <div class="form-group">
-                    <label>Piattaforma</label>
-                    <select id="link-piattaforma">
-                        <option value="VINTED">Vinted</option>
-                        <option value="EBAY">eBay</option>
-                        <option value="SUBITO">Subito</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>URL della Ricerca</label>
-                    <input type="text" id="link-url" placeholder="https://...">
-                </div>
-                <button class="btn-add" onclick="addLink()">➕ Aggiungi al Server</button>
-            </div>
-            
-            <h3 style="margin-bottom: 15px; color: white;">Ricerche Attive sul Server</h3>
+        <div>
+            <h3 style="font-size: 14px; margin-bottom: 10px;">Link Attivi (<span id="links-count">0</span>)</h3>
             <div class="link-list" id="links-container"></div>
         </div>
     </div>
 
+    <div class="main">
+        <div class="header">
+            <h1 style="font-size: 24px;">Mercato (<span id="bombs-count">0</span>)</h1>
+            <select class="sort-select" id="sort-order" onchange="renderDeals()">
+                <option value="date">🕒 Ultimi Trovati</option>
+                <option value="margin">🔥 Sconto Maggiore</option>
+                <option value="price-asc">💶 Prezzo Crescente</option>
+            </select>
+        </div>
+        <div class="grid" id="results-grid"></div>
+    </div>
+
     <script>
-        // --- INSERISCI QUI LE TUE CHIAVI ---
-        const SUPABASE_URL = 'https://INSERISCI_IL_TUO_ID.supabase.co';
-        const SUPABASE_KEY = 'INSERISCI_LA_TUA_CHIAVE';
+        // INSERISCI I TUOI DATI SUPABASE QUI
+        const SUPABASE_URL = 'https://gfzzysqyddcotclnzdzl.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_8hAW21CnmTN2vIlpLmBZBQ_vmS43QF5';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let dealsData = [];
-        let linksData = [];
+        let deals = [];
+        let links = [];
 
-        // NAVIGAZIONE TABS
-        function switchTab(tab) {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById('view-' + tab).classList.add('active');
-            event.target.classList.add('active');
-            if(tab === 'ricerche') loadLinks();
-        }
-
-        // ================= GESTIONE DEALS =================
-        async function loadDeals() {
-            const btn = document.getElementById('btn-sync');
-            btn.innerText = "Sincronizzazione...";
-            const { data, error } = await supabase.from('lootsniper_deals').select('*').order('created_at', { ascending: false });
-            if (!error) {
-                dealsData = data;
-                document.getElementById('count-bombs').innerText = data.length;
-                renderCards();
+        async function loadData() {
+            // Carica Link
+            const resLinks = await supabase.from('lootsniper_links').select('*');
+            if(resLinks.data) {
+                links = resLinks.data;
+                document.getElementById('links-count').innerText = links.length;
+                renderLinks();
             }
-            btn.innerText = `🔄 Sincronizza (${data ? data.length : 0})`;
+            // Carica Bombe
+            const resDeals = await supabase.from('lootsniper_deals').select('*').order('created_at', { ascending: false });
+            if(resDeals.data) {
+                deals = resDeals.data;
+                document.getElementById('bombs-count').innerText = deals.length;
+                renderDeals();
+            }
         }
 
+        async function addLink() {
+            const nome = document.getElementById('l-nome').value;
+            const piattaforma = document.getElementById('l-plat').value;
+            const url = document.getElementById('l-url').value;
+            if(!nome || !url) return alert("Compila tutti i campi");
+            await supabase.from('lootsniper_links').insert([{ nome, piattaforma, url }]);
+            document.getElementById('l-nome').value = ''; document.getElementById('l-url').value = '';
+            loadData();
+        }
+
+        async function deleteLink(id) {
+            await supabase.from('lootsniper_links').delete().eq('id', id);
+            loadData();
+        }
+        
         async function deleteDeal(id) {
-            if(confirm("Scartare questo annuncio?")) {
-                await supabase.from('lootsniper_deals').delete().eq('id', id);
-                loadDeals();
-            }
+            await supabase.from('lootsniper_deals').delete().eq('id', id);
+            loadData();
         }
 
-        function renderCards() {
+        function renderLinks() {
+            const container = document.getElementById('links-container');
+            container.innerHTML = "";
+            links.forEach(l => {
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="link-item">
+                        <span><b>${l.piattaforma}:</b> ${l.nome}</span>
+                        <button class="del-btn" onclick="deleteLink('${l.id}')">X</button>
+                    </div>
+                `);
+            });
+        }
+
+        function renderDeals() {
             const grid = document.getElementById('results-grid');
             grid.innerHTML = ""; 
             const sortVal = document.getElementById('sort-order').value;
-            let sorted = [...dealsData]; 
+            let sorted = [...deals]; 
             
             if (sortVal === 'margin') sorted.sort((a, b) => b.margine - a.margine);
             else if (sortVal === 'price-asc') sorted.sort((a, b) => a.prezzo - b.prezzo);
             else if (sortVal === 'date') sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
             sorted.forEach(item => {
-                let tagsHtml = item.tags ? item.tags.map(t => `<span class="tag">${t.text}</span>`).join('') : "";
-                const cardHtml = `
+                grid.insertAdjacentHTML('beforeend', `
                     <div class="card">
                         <div class="card-header">
                             <span class="platform-badge ${item.piattaforma.toLowerCase()}">${item.piattaforma}</span>
-                            <div class="card-title">${item.titolo.substring(0, 55)}...</div>
+                            <div class="card-title">${item.titolo.substring(0, 50)}...</div>
                         </div>
                         <div class="card-body">
                             <div class="prices">
-                                <div><span style="font-size: 11px; color: #94a3b8;">RICHIESTA</span><br><span class="req-price">${item.prezzo}€</span></div>
-                                <div class="est-price">
-                                    <span>VALORE</span><strong>${item.stima}€</strong>
-                                    <span style="color:var(--success); font-weight:bold;">Margine ${item.margine}€</span>
-                                </div>
+                                <div><span style="font-size: 11px;">RICHIESTA</span><br><span class="req-price">${item.prezzo}€</span></div>
+                                <div class="est-price"><span>VALORE</span><strong>${item.stima}€</strong><br><span style="color:var(--success); font-weight:bold;">Risparmi ${item.margine}€</span></div>
                             </div>
-                            <div class="tags">${tagsHtml}</div>
                         </div>
                         <div class="card-footer">
-                            <a href="${item.url}" target="_blank" class="btn-link">Vedi Annuncio ➔</a>
-                            <button class="btn-delete" onclick="deleteDeal('${item.id}')">🗑️</button>
+                            <a href="${item.url}" target="_blank" class="btn-link">Apri Annuncio ➔</a>
+                            <button class="btn-link" style="flex: 0.3; background: var(--danger);" onclick="deleteDeal('${item.id}')">🗑️</button>
                         </div>
-                    </div>
-                `;
-                grid.insertAdjacentHTML('beforeend', cardHtml);
-            });
-        }
-
-        // ================= GESTIONE RICERCHE =================
-        async function loadLinks() {
-            const { data, error } = await supabase.from('lootsniper_links').select('*').order('created_at', { ascending: false });
-            if(!error) {
-                linksData = data;
-                renderLinks();
-            }
-        }
-
-        async function addLink() {
-            const nome = document.getElementById('link-nome').value;
-            const piattaforma = document.getElementById('link-piattaforma').value;
-            const url = document.getElementById('link-url').value;
-            if(!nome || !url) return alert("Inserisci Nome e URL!");
-
-            await supabase.from('lootsniper_links').insert([{ nome, piattaforma, url }]);
-            document.getElementById('link-nome').value = '';
-            document.getElementById('link-url').value = '';
-            loadLinks();
-        }
-
-        async function deleteLink(id) {
-            if(confirm("Eliminare questa ricerca dal server?")) {
-                await supabase.from('lootsniper_links').delete().eq('id', id);
-                loadLinks();
-            }
-        }
-
-        function renderLinks() {
-            const container = document.getElementById('links-container');
-            container.innerHTML = "";
-            linksData.forEach(item => {
-                container.insertAdjacentHTML('beforeend', `
-                    <div class="link-item">
-                        <div class="link-info">
-                            <h4><span class="platform-badge ${item.piattaforma.toLowerCase()}">${item.piattaforma}</span> ${item.nome}</h4>
-                            <p>${item.url}</p>
-                        </div>
-                        <button class="btn-delete" onclick="deleteLink('${item.id}')">🗑️</button>
                     </div>
                 `);
             });
         }
 
-        window.onload = loadDeals;
+        window.onload = loadData;
     </script>
 </body>
 </html>
