@@ -119,20 +119,38 @@
             const nome = document.getElementById('l-nome').value;
             const piattaforma = document.getElementById('l-plat').value;
             const url = document.getElementById('l-url').value;
-            if(!nome || !url) return alert("Compila tutti i campi");
-            await supabase.from('lootsniper_links').insert([{ nome, piattaforma, url }]);
-            document.getElementById('l-nome').value = ''; document.getElementById('l-url').value = '';
-            loadData();
+            
+            if(!nome || !url) return alert("❌ Devi compilare Nome e URL!");
+
+            const btn = document.querySelector('.btn-add');
+            btn.innerText = "⏳ Salvataggio...";
+
+            // Prova a inserire i dati
+            const { error } = await supabase.from('lootsniper_links').insert([{ nome, piattaforma, url }]);
+            
+            if (error) {
+                alert("❌ ERRORE DATABASE:\n" + error.message);
+                btn.innerText = "➕ Salva sul Server";
+            } else {
+                document.getElementById('l-nome').value = ''; 
+                document.getElementById('l-url').value = '';
+                btn.innerText = "➕ Salva sul Server";
+                loadData();
+            }
         }
 
         async function deleteLink(id) {
-            await supabase.from('lootsniper_links').delete().eq('id', id);
-            loadData();
+            if(confirm("Eliminare questa ricerca?")) {
+                await supabase.from('lootsniper_links').delete().eq('id', id);
+                loadData();
+            }
         }
         
         async function deleteDeal(id) {
-            await supabase.from('lootsniper_deals').delete().eq('id', id);
-            loadData();
+            if(confirm("Eliminare questa offerta?")) {
+                await supabase.from('lootsniper_deals').delete().eq('id', id);
+                loadData();
+            }
         }
 
         function renderLinks() {
