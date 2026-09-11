@@ -1,16 +1,11 @@
-console.log("🚀 Il file app.js è stato caricato correttamente!");
+console.log("🚀 Il file app.js è partito senza errori!");
 
-// Inizializza Supabase in modo sicuro
+// Credenziali
 const SUPABASE_URL = 'https://gfzzysqyddcotclnzdzl.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8hAW21CnmTN2vIlpLmBZBQ_vmS43QF5';
 
-let supabase;
-if (window.supabase) {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    console.log("✅ Connessione a Supabase pronta.");
-} else {
-    alert("❌ ATTENZIONE: Il browser sta bloccando Supabase. Disattiva AdBlock o ricarica la pagina.");
-}
+// FIX: Chiamiamo la variabile "db" per non entrare in conflitto con la libreria originale
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let deals = [];
 let links = [];
@@ -24,14 +19,14 @@ window.loadData = async function() {
         console.log("🔄 Scaricamento dati in corso...");
         
         // 1. Carica le ricerche salvate
-        const resLinks = await supabase.from('lootsniper_links').select('*');
+        const resLinks = await db.from('lootsniper_links').select('*');
         if (resLinks.error) throw resLinks.error;
         links = resLinks.data || [];
         document.getElementById('links-count').innerText = links.length;
         window.renderLinks();
 
         // 2. Carica gli affari trovati dal server
-        const resDeals = await supabase.from('lootsniper_deals').select('*').order('created_at', { ascending: false });
+        const resDeals = await db.from('lootsniper_deals').select('*').order('created_at', { ascending: false });
         if (resDeals.error) throw resDeals.error;
         deals = resDeals.data || [];
         document.getElementById('bombs-count').innerText = deals.length;
@@ -58,8 +53,8 @@ window.addLink = async function() {
         const btn = document.querySelector('.btn-add');
         btn.innerText = "⏳ Salvataggio...";
 
-        // Inserisce i dati su Supabase
-        const { error } = await supabase.from('lootsniper_links').insert([{ nome, piattaforma, url }]);
+        // Inserisce i dati su Supabase usando la nuova variabile "db"
+        const { error } = await db.from('lootsniper_links').insert([{ nome, piattaforma, url }]);
         
         if (error) throw error; 
 
@@ -67,7 +62,7 @@ window.addLink = async function() {
         document.getElementById('l-url').value = '';
         btn.innerText = "➕ Salva sul Server";
         
-        alert("✅ Ricerca salvata! Il bot inizierà a scansionarla.");
+        // Non facciamo alert fastidiosi, ricarichiamo e basta
         await window.loadData();
 
     } catch (error) {
@@ -79,14 +74,14 @@ window.addLink = async function() {
 
 window.deleteLink = async function(id) {
     if(confirm("Eliminare questa ricerca? Il server smetterà di monitorarla.")) {
-        await supabase.from('lootsniper_links').delete().eq('id', id);
+        await db.from('lootsniper_links').delete().eq('id', id);
         window.loadData();
     }
 };
 
 window.deleteDeal = async function(id) {
     if(confirm("Scartare questa offerta?")) {
-        await supabase.from('lootsniper_deals').delete().eq('id', id);
+        await db.from('lootsniper_deals').delete().eq('id', id);
         window.loadData();
     }
 };
@@ -147,4 +142,4 @@ setTimeout(() => {
     if (typeof window.loadData === 'function') {
         window.loadData();
     }
-}, 500);
+}, 300);
