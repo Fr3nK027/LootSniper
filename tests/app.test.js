@@ -1,0 +1,110 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const vm = require('node:vm');
+const fs = require('node:fs');
+const path = require('node:path');
+const coreSource = fs.readFileSync(path.join(__dirname, '../radar-core.js'), 'utf8');
+const appSource = fs.readFileSync(path.join(__dirname, '../app.js'), 'utf8');
+function harness({storage = {}, searches = [], revision = 'v1'} = {}) {
+  const memory = new Map(Object.entries(storage)), elements = new Map(), requests = [];
+  function element() {
+    return { value: '', checked: false, hidden: false, disabled: false, children: [], dataset: {},
+      innerHTML: '', textContent: '', files: [], classList: {toggle(){}, add(){}, remove(){}},
+      addEventListener(){}, setAttribute(){}, removeAttribute(){}, append(child){this.children.push(child);},
+      setCustomValidity(){}, reportValidity(){}, focus(){}, click(){}, showModal(){}, close(){} };
+  }
+  const context = vm.createContext({
+    URL, Blob, Intl, Date, AbortSignal, AbortController, console, Map, Set, Promise,
+    setInterval(){}, setTimeout, location: {protocol:'http:'},
+    document: { hidden: true, getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); },
+      createElement: element, addEventListener(){} },
+    localStorage: {getItem:key=>memory.get(key) ?? null, setItem:(key,value)=>memory.set(key,value)},
+    fetch: async (url, options={}) => {
+      requests.push({url, options});
+      const payload = options.method === 'POST' ? {revision:'v2',saved:1} :
+        url === '/api/searches' ? {searches,revision} : {items:[]};
+      return {ok:true, json:async()=>payload};
+    }
+  });
+  vm.runInContext(coreSource + '\n' + appSource, context);
+  return {context,memory,elements,requests,run:code=>vm.runInContext(code,context)};
+}
+const localSearch = {name:'Locale',ebay:'https://ebay.it/sch/i.html?_nkw=laptop'};
+const serverSearch = {name:'Server',vinted:'https://vinted.it/catalog?search_text=laptop'};
+test('startup reads saved searches without overwriting existing server searches', async () => {
+  const app = harness({storage:{'radar-searches':JSON.stringify([localSearch])}, searches:[serverSearch]});
+  await app.run('initialSync');
+  assert.equal(app.requests.filter(request=>request.options.method === 'POST').length, 0);
+  assert.equal(JSON.parse(app.memory.get('radar-searches'))[0].name, 'Server');
+  assert.equal(JSON.parse(app.memory.get('radar-searches-local-backup'))[0].name, 'Locale');
+});
+test('first-run migration sends existing local searches with the server revision', async () => {
+  const app = harness({storage:{'radar-searches':JSON.stringify([localSearch])}});
+  await app.run('initialSync');
+  const post = app.requests.find(request=>request.options.method === 'POST');
+  assert.equal(JSON.parse(post.options.body).revision, 'v1');
+  assert.equal(JSON.parse(post.options.body).searches[0].name, 'Locale');
+});
+test('corrupt JSON is recoverable and does not stop dashboard initialization', async () => {
+  const app = harness({storage:{'radar-results':'{broken', 'radar-undo':'{"results":null}'}});
+  await app.run('initialSync');
+  assert.equal(app.memory.get('radar-results-corrupt-backup'), '{broken');
+  assert.equal(app.run('bombsArray.length'), 0);
+  assert.equal(app.run('undoArchive'), null);
+});
+test('imports update a saved listing even when its price is no longer a deal', async () => {
+  const app = harness(); await app.run('initialSync');
+  assert.equal(app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/123',title:'Laptop RTX 4070 32 GB RAM',price:900,updatedAt:Date.now()-10000})"), true);
+  assert.equal(app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/123',title:'Laptop RTX 4070 32 GB RAM',price:2000,updatedAt:Date.now()})"), true);
+  assert.equal(app.run('bombsArray[0].prezzo'), 2000);
+  assert.equal(app.run('bombsArray.length'), 1);
+  assert.equal(app.run('filteredItems().length'), 1);
+});
+test('old import snapshots cannot overwrite a more recent price', async () => {
+  const app = harness(); await app.run('initialSync');
+  app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/123',title:'Laptop RTX 4070',price:900,updatedAt:Date.now()})");
+  assert.equal(app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/123',title:'Laptop RTX 4070',price:800,updatedAt:Date.now()-1000})"), false);
+  assert.equal(app.run('bombsArray[0].prezzo'), 900);
+});
+test('favorites migrate from tracked URLs to their canonical listing identity', () => {
+  const app = harness({storage:{'radar-favorites':JSON.stringify(['https://ebay.it/itm/123?track=1'])}});
+  assert.equal(app.run("favorites.has('https://www.ebay.it/itm/123')"), true);
+});
+test('saved filters restore only valid values and do not become arbitrary HTML', () => {
+  const app = harness({storage:{'radar-filters':JSON.stringify({'max-price':'800','platform-filter':'EBAY','favorites-only':true,'sort-order':'not-a-sort'})}});
+  assert.equal(app.elements.get('max-price').value, '800');
+  assert.equal(app.elements.get('platform-filter').value, 'EBAY');
+  assert.equal(app.elements.get('favorites-only').checked, true);
+  assert.equal(app.elements.get('sort-order').value, 'margin-desc');
+});
+test('price history records changes and survives backup normalization', async () => {
+  const app = harness(); await app.run('initialSync');
+  app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/123',title:'Laptop RTX 4070',price:900,updatedAt:Date.now()-2000})");
+  app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/123',title:'Laptop RTX 4070',price:800,updatedAt:Date.now()-1000})");
+  app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/123',title:'Laptop RTX 4070',price:800,updatedAt:Date.now()})");
+  assert.equal(app.run('bombsArray[0].priceHistory.length'), 2);
+  assert.equal(app.run('cleanResult(bombsArray[0]).priceHistory[0].price'), 900);
+  assert.match(app.run('cardTemplate(bombsArray[0])'), /price-drop/);
+});
+test('a new quick query replaces stale generated links but respects manual overrides', async () => {
+  const app = harness(); await app.run('initialSync');
+  app.elements.get('market-query').value='RTX 4080';
+  app.elements.get('link-ebay').value='https://www.ebay.it/sch/i.html?_nkw=old';
+  app.run('quickQueryDirty = true');
+  assert.match(app.run('getSources()[1].url'), /RTX%204080/);
+  app.elements.get('link-ebay').value='https://www.ebay.it/sch/i.html?_nkw=custom';
+  app.run("quickQueryDirty = true; manualPlatforms.add('EBAY')");
+  assert.match(app.run('getSources()[1].url'), /custom/);
+});
+test('legacy result-array backups merge duplicates and reject unsupported versions', async () => {
+  const app = harness(); await app.run('initialSync');
+  await app.run(`importBackup({target:{files:[{size:100,text:async()=>JSON.stringify([
+    {titolo:'Laptop',platform:'EBAY',url:'https://ebay.it/itm/1',prezzo:500,evalData:{stima:1000,tags:[]}},
+    {titolo:'Laptop aggiornato',platform:'EBAY',url:'https://ebay.it/itm/1?track=2',prezzo:450,evalData:{stima:1000,tags:[]}}
+  ])}],value:'backup'}})`);
+  assert.equal(app.run('bombsArray.length'), 1);
+  assert.equal(app.run('bombsArray[0].prezzo'), 450);
+  await app.run("importBackup({target:{files:[{size:10,text:async()=>JSON.stringify({version:99,results:[]})}],value:'backup'}})");
+  assert.equal(app.run('bombsArray.length'), 1);
+});

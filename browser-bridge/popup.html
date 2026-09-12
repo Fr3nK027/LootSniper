@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Radar Usato</title>
+  <style>
+    :root { color-scheme: dark; font-family: Segoe UI, sans-serif; }
+    body { width: 300px; margin: 0; padding: 18px; color: #f8fafc; background: #101827; }
+    h1 { margin: 0 0 6px; font-size: 18px; }
+    p { margin: 0; color: #aab7ca; font-size: 12px; line-height: 1.45; }
+    .status { margin: 16px 0; padding: 11px; border: 1px solid #334155; border-radius: 6px; background: #182338; }
+    .status strong { display: block; margin-bottom: 4px; color: #73e6d6; }
+    button { width: 100%; padding: 10px 12px; border: 0; border-radius: 5px; color: #07151b; background: #73e6d6; font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    button { margin-top: 8px; }
+    [hidden] { display: none !important; }
+    :focus-visible { outline: 2px solid #73e6d6; outline-offset: 3px; }
+    #automation-detail { margin-top: 14px; }
+    fieldset { margin: 14px 0; padding: 10px; border: 1px solid #334155; border-radius: 6px; }
+    legend { padding: 0 5px; color: #73e6d6; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    label { display: flex; align-items: center; gap: 8px; margin: 8px 0; color: #d6deeb; font-size: 12px; }
+    input { accent-color: #73e6d6; }
+    select { width: 100%; padding: 8px; color: #f8fafc; background: #101827; border: 1px solid #475569; border-radius: 4px; }
+    #save-settings { margin-top: 8px; color: #d6deeb; background: #263653; }
+    a { display: block; margin-top: 12px; color: #9abaff; text-align: center; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Radar Usato</h1>
+  <p>Importa gli annunci dalla ricerca aperta su Vinted, eBay o Subito.</p>
+  <div class="status" id="status" role="status"><strong>Connessione…</strong><span>Controllo il server locale.</span></div>
+  <fieldset>
+    <legend>Marketplace</legend>
+    <label><input type="checkbox" data-platform="VINTED" checked> Vinted</label>
+    <label><input type="checkbox" data-platform="EBAY" checked> eBay</label>
+    <label><input type="checkbox" data-platform="SUBITO" checked> Subito</label>
+  </fieldset>
+  <fieldset>
+    <legend>Ricerche salvate</legend>
+    <select id="saved-searches" aria-label="Ricerche da eseguire" multiple size="4"><option>Caricamento...</option></select>
+    <label><input id="all-searches" type="checkbox" checked> Usa tutte le ricerche</label>
+  </fieldset>
+  <label><input id="automatic-enabled" type="checkbox" checked> Controlla ogni 15 minuti e all’avvio</label>
+  <button id="save-settings" type="button">Salva automazione</button>
+  <button id="import" type="button">Importa questa pagina</button>
+  <button id="run-searches" type="button">Esegui ricerche selezionate</button>
+  <p id="automation-detail" role="status"></p>
+  <button id="stop-searches" type="button" hidden>Interrompi ricerca</button>
+  <a href="http://127.0.0.1:8765/" target="_blank" rel="noopener">Apri dashboard Radar</a>
+  <script src="popup.js"></script>
+</body>
+</html>

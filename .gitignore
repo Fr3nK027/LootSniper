@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.log
+radar-searches.json
+radar-imports.json
+radar-backup*.json
+radar-annunci*.json
+dist/
+.DS_Store
+.venv/
+.publish/
+radar-discord.json
+radar-discord.json.tmp

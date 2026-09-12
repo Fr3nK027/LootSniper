@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Cerca, salva e confronta portatili gaming usati su Vinted, eBay e Subito.">
+  <title>Radar Usato | Il tuo prossimo portatile</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="radar-core.js" defer></script>
+  <script src="browser-bridge/listings.js" defer></script>
+  <script src="app.js" defer></script>
+  <script src="radar-runtime.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Vai ai risultati</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Configurazione ricerca">
+      <div><div class="brand"><span class="brand-mark" aria-hidden="true">◎</span> RADAR / USATO</div><p class="kicker">Tre marketplace. Un solo posto.</p></div>
+      <p class="sidebar-copy">Cerca il tuo prossimo portatile gaming e tieni vicine le occasioni da approfondire.</p>
+      <div class="source-list">
+        <div class="field"><label for="market-query">Cosa stai cercando?</label><input id="market-query" type="search" placeholder="es. laptop RTX 4070" autocomplete="off"><button class="text-button" id="btn-generate-links">Genera i tre link dalla ricerca</button></div>
+        <details class="source-details" open><summary>Link dei marketplace <span>Personalizza i filtri sui siti</span></summary>
+          <div class="field"><label for="link-vinted"><span class="source-dot vinted"></span> Vinted</label><input id="link-vinted" type="url" placeholder="https://www.vinted.it/..." autocomplete="off"><a id="open-vinted" class="source-open" target="_blank" rel="noopener noreferrer" hidden>Apri ricerca Vinted ↗</a></div>
+          <div class="field"><label for="link-ebay"><span class="source-dot ebay"></span> eBay</label><input id="link-ebay" type="url" placeholder="https://www.ebay.it/..." autocomplete="off"><a id="open-ebay" class="source-open" target="_blank" rel="noopener noreferrer" hidden>Apri ricerca eBay ↗</a></div>
+          <div class="field"><label for="link-subito"><span class="source-dot subito"></span> Subito</label><input id="link-subito" type="url" placeholder="https://www.subito.it/..." autocomplete="off"><a id="open-subito" class="source-open" target="_blank" rel="noopener noreferrer" hidden>Apri ricerca Subito ↗</a></div>
+        </details>
+      </div>
+      <div class="saved-searches">
+        <p class="kicker">Le mie ricerche</p>
+        <div class="save-search-row"><input id="search-name" type="text" aria-label="Nome della ricerca" placeholder="Nome della ricerca" maxlength="80"><button class="secondary" id="btn-save-search">Salva</button></div>
+        <div class="saved-search-list" id="saved-search-list"></div><small id="sync-status" class="helper">Caricamento ricerche…</small>
+        <button class="text-button" id="btn-restore-searches" hidden>Recupera ricerche dalla copia locale</button>
+      </div>
+      <label class="check-row"><input id="deep-scan" type="checkbox" checked> Più pagine <span class="helper">max 20 per sito</span></label>
+      <div class="button-stack"><button class="primary" id="btn-scan"><span class="loader" aria-hidden="true"></span><span id="btn-text">Esegui ricerca</span><span aria-hidden="true">↗</span></button><button class="secondary" id="btn-stop" hidden>Interrompi ricerca</button></div>
+      <a class="mobile-results-link text-button" href="#main">Vai ai risultati ↓</a>
+      <div id="scan-progress" hidden role="status"><progress aria-label="Ricerca in corso"></progress><span id="scan-status"></span></div>
+      <details class="activity" open><summary>Attività</summary><div class="status-box" id="log-box" role="log" aria-live="polite"><p>Sistema pronto. I risultati restano nel tuo browser.</p></div></details>
+      <details class="runtime-settings"><summary>Discord · pubblica le bombe</summary>
+        <p class="helper">Invia le nuove opportunità al tuo canale Discord. Il webhook viene conservato soltanto sul PC.</p>
+        <div class="field"><label for="discord-url">URL webhook Discord</label><input id="discord-url" type="password" autocomplete="off" placeholder="https://discord.com/api/webhooks/…"></div>
+        <div class="field"><label for="discord-margin">Differenza stimata minima (€)</label><input id="discord-margin" type="number" min="0" max="100000" step="10" value="0"></div>
+        <label class="check-row"><input id="discord-enabled" type="checkbox"> Pubblica le nuove bombe</label>
+        <div class="button-stack"><button class="secondary" id="btn-discord-save">Salva Discord</button><button class="secondary" id="btn-discord-test" disabled>Invia messaggio di prova</button><button class="text-button" id="btn-discord-clear">Rimuovi webhook</button></div>
+        <p class="helper" id="discord-status" role="status">Caricamento impostazioni…</p>
+      </details>
+      <p class="helper" id="lifetime-status">Avvia “avvia radar.vbs” per lavorare senza finestre CMD. Dopo la chiusura di tutte le dashboard il server si arresta automaticamente.</p>
+      <button class="secondary" id="btn-shutdown">Arresta Radar</button>
+    </aside>
+    <main class="main" id="main">
+      <header class="topline"><div><p class="kicker">Il tuo osservatorio personale</p><h1>Scopri. Valuta.<br><span>Scegli meglio.</span></h1><p class="subtitle">Le occasioni per il tuo prossimo portatile gaming, raccolte da Vinted, eBay e Subito.</p></div><span class="live-dot offline" id="connection-status" role="status">Connessione…</span></header>
+      <div class="offline-banner" id="offline-help" hidden>Il server locale non è raggiungibile. Avvia <strong>avvia radar.vbs</strong>: puoi comunque consultare ed esportare gli annunci salvati.</div>
+      <section class="stat-strip" aria-label="Statistiche"><div class="stat"><span>Nel tuo radar</span><strong id="count-bombs">0</strong><small>opportunità salvate</small></div><div class="stat"><span>Questa sessione</span><strong id="count-scanned">0</strong><small>annunci analizzati</small></div><div class="stat"><span>Da tenere d’occhio</span><strong id="count-favorites">0</strong><small>annunci preferiti</small></div></section>
+      <div class="section-heading"><h2>Le tue opportunità <span id="results-count" tabindex="-1" role="status">0 risultati</span></h2><div class="top-actions"><button class="secondary" id="btn-export">Esporta backup</button><button class="secondary" id="btn-import-backup">Importa backup</button><details class="archive-menu"><summary>Archivio</summary><div><button class="text-button" id="btn-backup">Backup completo</button><button class="text-button" id="btn-clear">Svuota archivio</button><button class="text-button" id="btn-undo" hidden>Annulla svuotamento</button></div></details></div></div>
+      <input type="file" id="backup-file" accept=".json,application/json" hidden>
+      <section class="toolbar" aria-label="Filtri risultati">
+        <input id="search-input" type="search" placeholder="Cerca modello, GPU o caratteristica…" aria-label="Cerca nei risultati">
+        <select id="platform-filter" aria-label="Filtra piattaforma"><option value="">Tutti i marketplace</option><option value="VINTED">Vinted</option><option value="EBAY">eBay</option><option value="SUBITO">Subito</option></select>
+        <select id="sort-order" aria-label="Ordina risultati"><option value="margin-desc">Differenza stimata ↓</option><option value="price-asc">Prezzo più basso</option><option value="price-desc">Prezzo più alto</option><option value="vs-desc">Indice hardware ↓</option><option value="newest">Aggiornati di recente</option></select>
+      </section>
+      <section class="filter-extras" aria-label="Budget e preferiti">
+        <label>Budget massimo <span><input id="max-price" type="number" min="0" step="50" placeholder="Qualsiasi"> €</span></label>
+        <label>Differenza minima <span><input id="min-margin" type="number" min="0" step="50" placeholder="0"> €</span></label>
+        <label class="favorites-filter"><input id="favorites-only" type="checkbox"> Solo preferiti</label>
+        <button class="text-button" id="btn-reset-filters">Azzera filtri</button>
+      </section>
+      <p class="estimate-note">Le stime e l’indice hardware seguono regole indicative, non quotazioni aggiornate o benchmark. Verifica configurazione, condizioni, spedizione e commissioni nell’annuncio.</p>
+      <section class="grid" id="results-grid" aria-label="Annunci trovati"></section>
+      <button class="secondary load-more" id="btn-more" hidden>Mostra altri 60 annunci</button>
+      <footer class="main-footer"><span>RADAR / USATO</span><span>I tuoi dati restano sul tuo dispositivo.</span></footer>
+    </main>
+  </div>
+  <div class="compare-bar" id="compare-bar" inert><span id="compare-text">0 selezionati</span><button class="primary" id="btn-versus">Confronta</button><button class="secondary" id="btn-clear-comparison" aria-label="Annulla selezione confronto">×</button></div>
+  <dialog id="comparison-dialog" aria-labelledby="comparison-title"><div class="dialog-heading"><h2 id="comparison-title">Confronta le tue scelte</h2><button class="secondary" id="btn-close-comparison" aria-label="Chiudi confronto">×</button></div><p class="estimate-note">Prezzi e specifiche da verificare negli annunci. L’indice hardware è indicativo.</p><div id="comparison-content" class="comparison-scroll"></div></dialog>
+</body>
+</html>

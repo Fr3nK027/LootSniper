@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+<title id="title">Avvia Radar Usato in locale in quattro passaggi</title>
+<desc id="desc">Installa Python, scarica ed estrai il progetto, avvia il file BAT, usa la dashboard nel browser con il server nascosto in background.</desc>
+<rect width="1200" height="360" rx="24" fill="#0d1828"/>
+<g font-family="Segoe UI,Arial,sans-serif">
+<text x="40" y="54" fill="#75e6d2" font-size="17" font-weight="700">RADAR / USATO · AVVIO SUL PC</text>
+<text x="40" y="92" fill="#f1f5fa" font-size="28" font-weight="700">Dal download alla tua prima ricerca</text>
+<g fill="#17283b" stroke="#32455d"><rect x="40" y="124" width="265" height="172" rx="14"/><rect x="325" y="124" width="265" height="172" rx="14"/><rect x="610" y="124" width="265" height="172" rx="14"/><rect x="895" y="124" width="265" height="172" rx="14"/></g>
+<g fill="#75e6d2" font-size="25" font-weight="700"><text x="60" y="162">01</text><text x="345" y="162">02</text><text x="630" y="162">03</text><text x="915" y="162">04</text></g>
+<g fill="#f1f5fa" font-size="21" font-weight="700"><text x="60" y="197">Installa Python</text><text x="345" y="197">Estrai lo ZIP</text><text x="630" y="197">Avvia il Radar</text><text x="915" y="197">Apri la dashboard</text></g>
+<g fill="#b8c7db" font-size="16"><text x="60" y="232">Python 3.10 o successivo</text><text x="60" y="259">Verifica: py -3 --version</text><text x="345" y="232">GitHub → Code</text><text x="345" y="259">Download ZIP → Estrai tutto</text><text x="630" y="232">Doppio clic su</text><text x="630" y="259">avvia radar.vbs</text><text x="915" y="232">http://127.0.0.1:8765</text><text x="915" y="259">Nessuna finestra CMD</text></g>
+<text x="40" y="331" fill="#a9bdd1" font-size="15">Per chiudere: premi Arresta Radar, oppure chiudi tutte le dashboard (arresto dopo circa 45 secondi).</text>
+</g></svg>

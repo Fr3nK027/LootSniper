@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="it"><meta charset="utf-8"><title>Test parser Radar · dati sintetici</title>
+<style>body{font:16px/1.6 system-ui;background:#102033;color:#e5f5ef;padding:30px}li{padding:8px}.pass{color:#75ecd1}.fail{color:#ff8995}</style>
+<h1>Test del parser annunci</h1><p>Documenti sintetici: nessuna richiesta ai marketplace.</p><ol id="results"></ol>
+<script src="/browser-bridge/listings.js"></script>
+<script>
+const cases = [
+  ['Layout con classi nuove: riconoscimento tramite link e scheda', 'EBAY', 'https://www.ebay.it/sch/i.html',
+   '<li class="new-result-layout"><a href="/itm/81234"><h3>Notebook RTX 4070</h3></a><span class="new-price">950 EUR</span></li>', 1, 'https://www.ebay.it/itm/81234'],
+  ['eBay: estrazione e deduplica URL con tracking', 'EBAY', 'https://www.ebay.it/sch/i.html',
+   '<div class="s-item"><a href="/itm/laptop/12345?track=1"><h3>Laptop RTX 4070</h3></a><span class="s-item__price">900,00 EUR</span></div><div class="s-item"><a href="/itm/12345?track=2"><h3>Duplicato</h3></a><span class="s-item__price">900,00 EUR</span></div>', 1, 'https://www.ebay.it/itm/12345'],
+  ['Subito: link .htm e prezzo italiano', 'SUBITO', 'https://www.subito.it/annunci-italia/',
+   '<article><a href="/informatica/notebook-12345.htm"><h2>Notebook RTX 4080</h2></a><span class="price">1.200,00 €</span></article>', 1, 'https://www.subito.it/informatica/notebook-12345.htm'],
+  ['Vinted: titolo aria-label e immagine lazy', 'VINTED', 'https://www.vinted.it/catalog',
+   '<article><a aria-label="Laptop RTX 4060" href="/items/12345-laptop"></a><span data-testid="price-text">550 €</span><img data-src="https://images.example/laptop.jpg"></article>', 1, 'https://www.vinted.it/items/12345'],
+  ['Scarta pubblicità e URL esterni', 'EBAY', 'https://www.ebay.it/sch/i.html',
+   '<article class="s-item s-item__pl"><a href="/itm/1"><h3>Pubblicità</h3></a><span class="price">800 €</span></article><article class="s-item"><a href="https://evil.example/itm/2"><h3>Link esterno</h3></a><span class="price">800 €</span></article>', 0],
+  ['Scarta schede prive di prezzo', 'VINTED', 'https://www.vinted.it/catalog',
+   '<article><a href="/items/1234"><h2>Notebook senza prezzo</h2></a></article>', 0],
+  ['Non importa un link di ricerca come annuncio', 'SUBITO', 'https://www.subito.it/annunci-italia/',
+   '<article><a href="/informatica.html"><h2>Ricerca notebook</h2></a><span class="price">500 €</span></article>', 0],
+  ['URL relativi risolti e immagine assente vuota', 'VINTED', 'https://www.vinted.it/catalog',
+   '<article><a href="/items/77-test"><h2>Laptop</h2></a><span class="price">750 €</span></article>', 1, 'https://www.vinted.it/items/77']
+];
+for (const [name,platform,url,html,count,expectedUrl] of cases) {
+  const row = document.createElement('li');
+  try {
+    const items = RadarListings.collect(new DOMParser().parseFromString(html,'text/html'),{platform,url});
+    if (items.length !== count || (expectedUrl && items[0].url !== expectedUrl)) throw new Error(JSON.stringify(items));
+    if (name.startsWith('URL relativi') && items[0].image !== '') throw new Error('Immagine mancante non vuota');
+    row.className='pass';row.textContent='PASS · '+name;
+  } catch(error) {row.className='fail';row.textContent='FAIL · '+name+' · '+error.message;}
+  document.getElementById('results').append(row);
+}
+</script></html>
