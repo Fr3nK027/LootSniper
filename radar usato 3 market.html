@@ -6,6 +6,7 @@
   <meta name="description" content="Cerca, salva e confronta portatili gaming usati su Vinted, eBay e Subito.">
   <title>LootSniper | Il tuo prossimo portatile</title>
   <link rel="icon" href="assets/lootsniper.svg" type="image/svg+xml">
+  <script src="theme.js"></script>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="experience.css">
   <script src="radar-core.js" defer></script>
@@ -18,7 +19,7 @@
   <a class="skip-link" href="#main">Vai ai risultati</a>
   <div class="app-shell">
     <aside class="sidebar" aria-label="Configurazione ricerca">
-      <div><div class="brand"><img src="assets/lootsniper.svg" alt=""> LootSniper</div><p class="kicker">Tre marketplace. Un solo posto.</p></div>
+      <div class="brand-intro"><div class="brand-row"><div class="brand"><img src="assets/lootsniper.svg" alt=""> LootSniper</div><button class="theme-toggle" id="btn-theme" type="button" aria-pressed="false" aria-label="Passa alla modalità notte"><span id="theme-icon" aria-hidden="true">☀</span><span id="theme-label">Giorno</span></button></div><p class="kicker">Tre marketplace. Un solo posto.</p></div>
       <p class="sidebar-copy">Cerca il tuo prossimo portatile gaming e tieni vicine le occasioni da approfondire.</p>
       <div class="source-list">
         <div class="field"><label for="market-query">Cosa stai cercando?</label><input id="market-query" type="search" placeholder="es. laptop RTX 4070" autocomplete="off"><button class="text-button" id="btn-generate-links">Genera i tre link dalla ricerca</button></div>

@@ -34,6 +34,10 @@ Windows può mostrare un avviso perché lo script non è firmato digitalmente. V
 
 La prima apertura mostra una guida in tre passaggi. Inserisci cosa cerchi e, se vuoi, il budget: LootSniper prepara automaticamente i link per Vinted, eBay e Subito. La guida rimane sempre disponibile con **Guida rapida**.
 
+Il pulsante **Giorno / Notte** accanto al logo cambia l’aspetto della dashboard e ricorda la scelta. Al primo avvio LootSniper segue automaticamente il tema di Windows.
+
+![Dashboard LootSniper in modalità notte](docs/images/dashboard-notte.png)
+
 ![Avvio guidato di LootSniper](docs/images/guida.png)
 
 In seguito avvia il programma dal collegamento **LootSniper** sul desktop o nel menu Start. La dashboard è disponibile su [http://127.0.0.1:8765](http://127.0.0.1:8765); in alto deve apparire **Server connesso**.
@@ -230,7 +234,7 @@ Python usa soltanto la libreria standard. Node.js serve esclusivamente per i tes
 
 ```text
 python -B -m unittest discover -s tests -v
-node --test tests/core.test.js tests/app.test.js tests/extension.test.js
+node --test tests/core.test.js tests/app.test.js tests/extension.test.js tests/theme.test.js
 ```
 
 Per un’anteprima con annunci sintetici, isolata dai dati reali:
