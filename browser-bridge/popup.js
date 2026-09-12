@@ -45,7 +45,7 @@ async function initialize() {
 }
 async function collectCurrentPage() {
   $('import').disabled = true;
-  showStatus('Lettura pagina…', 'Attendo la conferma di salvataggio dal Radar.');
+  showStatus('Lettura pagina…', 'Attendo la conferma di salvataggio da LootSniper.');
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id || !/^https:\/\/(www\.)?(ebay\.it|subito\.it|vinted\.it)\//i.test(tab.url || '')) {

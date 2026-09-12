@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="470" viewBox="0 0 1200 470" role="img" aria-labelledby="title desc">
 <title id="title">Installazione e utilizzo dell'estensione locale</title>
-<desc id="desc">Apri chrome://extensions o edge://extensions, attiva modalità sviluppatore e carica la cartella browser-bridge. Sulla ricerca del marketplace premi Importa questa pagina. Gli annunci arrivano nel Radar locale.</desc>
+<desc id="desc">Apri chrome://extensions o edge://extensions, attiva modalità sviluppatore e carica la cartella browser-bridge. Sulla ricerca del marketplace premi Importa questa pagina. Gli annunci arrivano in LootSniper.</desc>
 <rect width="1200" height="470" rx="24" fill="#0d1828"/>
 <g font-family="Segoe UI,Arial,sans-serif">
 <text x="40" y="50" fill="#75e6d2" font-size="17" font-weight="700">ESTENSIONE LOCALE · SCHEMA DEI PASSAGGI</text>

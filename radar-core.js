@@ -28,12 +28,12 @@ function analyzeHardware(text, price) {
   for (const model of PREMIUM_MODELS) if (text.includes(model)) { baseValue += 350; vsScore = Math.min(100, vsScore + 5); tags.push({ text: 'Serie premium · stima', cls: 't-up' }); break; }
   if (!baseValue) return null;
   if (!/\b(laptop|notebook|portatile)\b/.test(text) && !PREMIUM_MODELS.some(model => text.includes(model)) && !CHEAP_BRANDS.some(model => text.includes(model))) return null;
-  if (/(i9|ryzen 9|ultra 9|core 9|ryzen ai 9)/i.test(text)) { baseValue += 300; vsScore = Math.min(100, vsScore + 5); tags.push({ text: 'CPU top +300 EUR', cls: 't-up' }); }
-  for (const brand of CHEAP_BRANDS) if (text.includes(brand)) { damageMultiplier *= .8; vsScore = Math.max(10, vsScore - 10); tags.push({ text: 'Brand eco -20%', cls: 't-down' }); break; }
+  if (/(i9|ryzen 9|ultra 9|core 9|ryzen ai 9)/i.test(text)) { baseValue += 300; vsScore = Math.min(100, vsScore + 5); tags.push({ text: 'CPU fascia alta', cls: 't-up' }); }
+  for (const brand of CHEAP_BRANDS) if (text.includes(brand)) { damageMultiplier *= .8; vsScore = Math.max(10, vsScore - 10); tags.push({ text: 'Serie essenziale', cls: 't-down' }); break; }
   const ramMatch = text.match(/\b(8|16|32|64|96)\s*(?:gb|g)\s*(?:di\s+)?ram\b|\bram\s*(?:da\s*)?(8|16|32|64|96)\s*(?:gb|g)\b/);
   const ram = ramMatch ? Number(ramMatch[1] || ramMatch[2]) : 0;
   if (ram) { baseValue += ram >= 64 ? 250 : ram >= 32 ? 100 : 0; tags.push({ text: ram + 'GB RAM', cls: 't-up' }); }
-  if (/\b2\s*(tb|t)\b/i.test(text)) { baseValue += 100; tags.push({ text: '2TB storage', cls: 't-up' }); } else if (/\b4\s*(tb|t)\b/i.test(text)) { baseValue += 250; tags.push({ text: '4TB storage', cls: 't-up' }); }
+  if (/\b2\s*(tb|t)\b/i.test(text)) { baseValue += 100; tags.push({ text: '2 TB di archiviazione', cls: 't-up' }); } else if (/\b4\s*(tb|t)\b/i.test(text)) { baseValue += 250; tags.push({ text: '4 TB di archiviazione', cls: 't-up' }); }
   if (/\b(oled|mini-led|miniled)\b/i.test(text)) { baseValue += 200; tags.push({ text: /\boled\b/.test(text) ? 'Display OLED' : 'Display Mini LED', cls: 't-up' }); }
   if (!/(rotto|da riparare|ricambi|non si accende)/i.test(text) && /\b(nuovo|sigillato|imballato|mai acceso|mai aperto|scontrino di oggi)\b/i.test(text)) { damageMultiplier *= 1.15; tags.push({ text: 'Nuovo / sigillato', cls: 't-up' }); }
   else if (/(rotto|da riparare|per parti|ricambi|schermo rotto|non si accende)/i.test(text)) { damageMultiplier *= .5; tags.push({ text: 'Da riparare', cls: 't-down' }); }
@@ -43,6 +43,19 @@ function analyzeHardware(text, price) {
   const confidence = Math.min(100, 45 + (gpuMatch ? 35 : 0) + (/(ram|gb)/i.test(text) ? 10 : 0) + (/(ssd|nvme|tb)/i.test(text) ? 10 : 0));
   const estimated = Math.round(baseValue * damageMultiplier);
   return { stima: estimated, stimaNuovo: Math.round(estimated * (estimated > 3000 ? 1.55 : 1.4)), reference: null, tags, margine: estimated - price, gpuName: detectedGpu || 'Gaming Laptop', vsScore, confidence };
+}
+
+function explainListing(item) {
+  const text = normalizeListingText(item.titolo + ' ' + (item.details || ''));
+  const detected = analyzeHardware(text, item.prezzo);
+  const facts = detected ? detected.tags.filter(tag => tag.cls === 't-gpu' || /RAM|Display/.test(tag.text) && tag.cls === 't-up').map(tag => tag.text) : [];
+  const missing = [];
+  if (!detected || !detected.tags.some(tag => /GB RAM/.test(tag.text))) missing.push('Quantità di RAM');
+  if (!/\b(?:ssd|nvme|hdd)\s*(?:da\s*)?\d+(?:[.,]\d+)?\s*(?:gb|tb)\b|\b\d+(?:[.,]\d+)?\s*(?:gb|tb)\s*(?:di\s+)?(?:ssd|nvme|hdd)\b/i.test(text)) missing.push('Capacità di archiviazione');
+  if (!/\b(?:i[3579]|ryzen\s+[3579]|(?:core|ultra)\s+[3579])\b/.test(text)) missing.push('Processore');
+  const warnings = detected ? detected.tags.filter(tag => ['Da riparare', 'Usura'].includes(tag.text)).map(tag => tag.text) : [];
+  const difference = item.evalData.stima - item.prezzo;
+  return { difference, facts, missing, warnings };
 }
 
 function parseMoney(value) {
@@ -112,7 +125,9 @@ function cleanResult(item) {
       vsScore: Math.max(0, Math.min(100, Number(data.vsScore) || 0)),
       confidence: Math.max(0, Math.min(100, Number(data.confidence) || 45)),
       tags: data.tags.filter(tag => tag && typeof tag.text === 'string').map(tag => ({
-        text: tag.text.slice(0, 100), cls: ['t-up', 't-down', 't-gpu', 't-neutral'].includes(tag.cls) ? tag.cls : 't-neutral'
+        text: ({ 'CPU top +300 EUR': 'CPU fascia alta', 'Brand eco -20%': 'Serie essenziale',
+          '2TB storage': '2 TB di archiviazione', '4TB storage': '4 TB di archiviazione' }[tag.text] || tag.text).slice(0, 100),
+        cls: ['t-up', 't-down', 't-gpu', 't-neutral'].includes(tag.cls) ? tag.cls : 't-neutral'
       })) }
   };
 }
@@ -120,4 +135,4 @@ function validTimestamp(value) {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 && number <= Date.now() + 86400000 ? number : Date.now();
 }
-if (typeof module !== 'undefined') module.exports = { parseMoney, extractPrices, analyzeHardware, normalizeListingText, safeUrl, canonicalUrl, pageUrl, escapeHtml, cleanResult };
+if (typeof module !== 'undefined') module.exports = { explainListing, parseMoney, extractPrices, analyzeHardware, normalizeListingText, safeUrl, canonicalUrl, pageUrl, escapeHtml, cleanResult };

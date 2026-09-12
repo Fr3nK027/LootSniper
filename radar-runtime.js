@@ -55,8 +55,8 @@ async function heartbeat() {
     const status = await api('/api/heartbeat', {method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({client:dashboardClient}), signal:AbortSignal.timeout(5000)});
     $('lifetime-status').textContent = status.autoStop ?
-      'Il server lavora in background. Chiudi tutte le schede del Radar: si arresterà dopo circa 45 secondi. Oppure premi Arresta Radar.' :
-      'Server avviato manualmente: premi Arresta Radar per chiuderlo.';
+      'Il server lavora in background. Chiudi tutte le schede di LootSniper: si arresterà dopo circa 45 secondi. Oppure premi Arresta LootSniper.' :
+      'Server avviato manualmente: premi Arresta LootSniper per chiuderlo.';
   } catch { /* The main connection indicator already explains an offline server. */ }
 }
 window.addEventListener('pagehide', () => {
@@ -74,7 +74,7 @@ $('btn-shutdown').addEventListener('click', async () => {
     await api('/api/shutdown', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
     radarStopped = true;
     clearInterval(heartbeatTimer); clearInterval(discordTimer);
-    $('connection-status').textContent = 'Radar arrestato';
+    $('connection-status').textContent = 'LootSniper arrestato';
     $('connection-status').classList.add('offline');
     $('lifetime-status').textContent = 'Server arrestato. Puoi chiudere questa scheda. Per riavviare usa avvia radar.vbs.';
     $('btn-scan').disabled = true;

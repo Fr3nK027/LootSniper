@@ -28,7 +28,7 @@ class DistributionTests(unittest.TestCase):
                 self.assertNotIn('radar-discord.json', archive.namelist())
                 readme = archive.read('README.md').decode('utf-8')
                 images = re.findall(r'!\[[^\]]*\]\(([^)]+)\)', readme)
-                self.assertEqual(len(images), 5)
+                self.assertGreaterEqual(len(images), 6)
                 for name in images:
                     self.assertIn(name, archive.namelist())
                     self.assertGreater(len(archive.read(name)), 100)

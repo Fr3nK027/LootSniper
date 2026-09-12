@@ -1,0 +1,56 @@
+/* LootSniper: readable controls and a quieter, consistent visual hierarchy. */
+:root { --bg: #0b1320; --surface: #172538; --surface-2: #203047; --line: #3b4d63; --muted: #acbacc; }
+body { background: radial-gradient(ellipse at 90% 0%, #163b43 0, transparent 42%), var(--bg); }
+.brand { font-size: 23px; letter-spacing: -.04em; }
+.brand img { width: 38px; height: 38px; }
+.sidebar { gap: 20px; }
+.sidebar-copy, .helper, .subtitle, .check-row, .field label, .primary, .secondary, .card-title, .saved-empty { font-family: inherit; }
+.helper, .saved-empty { font-size: 13px; line-height: 1.6; }
+.field label { font-size: 12px; letter-spacing: .035em; }
+.primary, .secondary, .field input, .toolbar input, select { border-radius: 10px; min-height: 42px; }
+.saved-search button { min-height: 36px; }
+.saved-search { grid-template-columns: 1fr 36px 36px; }
+.saved-search-load { font: 600 12px/1.4 'Segoe UI', sans-serif; }
+.utility-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.utility-actions button { flex: 1; }
+.stat, .card { border-radius: 16px; }
+.stat { background: #17283ad9; box-shadow: none; }
+.card { background: linear-gradient(155deg, #1b2c40, #132234); box-shadow: 0 8px 24px #0002; }
+.card:hover { transform: none; }
+.card-image { height: 185px; padding: 12px; background: #101c2d; }
+.card-image img { object-fit: contain; border-radius: 8px; }
+.card-image.card-image-empty { height: 68px; place-items: center start; padding-left: 20px; background: linear-gradient(100deg, #244450, #152436); }
+.card-image-empty span { font-size: 12px; letter-spacing: .03em; }
+.favorite { background: #0b1320df; border: 1px solid var(--line); border-radius: 10px; width: 38px; height: 38px; top: 15px; right: 15px; }
+.card-title { line-height: 1.5; }
+.card-note { font-size: 12px; line-height: 1.5; }
+.deal-reason { margin: 16px 0 10px; padding: 12px; background: #0d1d2c; border-radius: 10px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.deal-reason strong { color: var(--cyan); font-weight: 600; }
+.deal-reason p { margin: 5px 0 0; }
+.deal-reason summary { margin-top: 6px; cursor: pointer; color: var(--text); }
+.deal-reason ul { padding-left: 17px; margin: 6px 0; }
+.deal-warning { color: #ffd59d; }
+.scan-feedback { border: 1px solid #396371; background: #152d38; border-radius: 12px; padding: 15px 18px; margin-bottom: 20px; }
+.scan-feedback p { margin: 5px 0; color: var(--muted); line-height: 1.5; font-size: 14px; }
+.scan-feedback .text-button { margin-top: 8px; }
+.empty .primary { margin-top: 12px; }
+.settings-dialog, .welcome-dialog { width: min(620px, calc(100vw - 28px)); max-height: calc(100dvh - 32px); border-radius: 20px; padding: 26px; }
+.settings-dialog .runtime-settings { margin-top: 20px; }
+.settings-dialog .field { margin-top: 15px; }
+.settings-dialog details { padding: 15px 0; border-bottom: 1px solid var(--line); }
+.settings-dialog summary { cursor: pointer; font-weight: 600; }
+.settings-dialog p, .settings-dialog li { font-size: 14px; line-height: 1.7; color: var(--muted); }
+.settings-dialog code { color: var(--cyan); overflow-wrap: anywhere; }
+.welcome-dialog { background: radial-gradient(circle at 95% 0%, #234c52, transparent 48%), #142335; }
+.welcome-dialog .dialog-heading { align-items: start; gap: 16px; }
+.welcome-dialog h2 { font-size: 27px; letter-spacing: -.025em; line-height: 1.2; }
+.welcome-dialog p { color: var(--muted); line-height: 1.7; }
+.welcome-dialog [data-step] { padding: 10px 0 24px; }
+.guide-steps { display: grid; gap: 13px; list-style: none; padding: 0; }
+.guide-steps li { display: flex; gap: 14px; align-items: center; padding: 15px; border: 1px solid var(--line); border-radius: 12px; }
+.guide-number { background: #29504f; color: var(--cyan); border-radius: 50%; width: 30px; height: 30px; display: grid; place-items: center; flex-shrink: 0; }
+.guide-steps small { display: block; margin-top: 4px; color: var(--muted); line-height: 1.5; }
+.guide-actions { display: flex; justify-content: end; gap: 10px; border-top: 1px solid var(--line); padding-top: 18px; }
+.guide-fields { display: grid; gap: 22px; margin-top: 22px; }
+@media (max-width: 600px) { .welcome-dialog, .settings-dialog { padding: 20px; } .welcome-dialog h2 { font-size: 23px; } .guide-actions button { flex: 1; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }

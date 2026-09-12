@@ -1,20 +1,25 @@
 """Package the local application for GitHub, excluding personal archives and logs."""
+import json
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parent
 FILES = [
-    '.gitignore', 'README.md', 'avvia radar locale.bat', 'launcher.py', 'server.py',
+    '.gitignore', 'README.md', 'Installa LootSniper.cmd', 'installa.ps1', 'distribuzione.json',
+    'radar-guide.js', 'experience.css', 'assets/lootsniper.svg', 'assets/lootsniper.ico', 'avvia radar locale.bat', 'launcher.py', 'server.py',
     'avvia radar.vbs', 'radar_discord.py', 'radar_lifecycle.py', 'radar-runtime.js',
     'radar usato 3 market.html', 'app.js', 'styles.css', 'radar-core.js', 'crea_pacchetto.py',
     'browser-bridge/README.md', 'browser-bridge/manifest.json', 'browser-bridge/background.js',
     'browser-bridge/content.js', 'browser-bridge/listings.js', 'browser-bridge/popup.html', 'browser-bridge/popup.js',
-    'docs/images/avvio.svg', 'docs/images/estensione.svg', 'docs/images/dashboard.png', 'docs/images/confronto.png', 'docs/images/discord.png',
+    'docs/images/avvio.svg', 'docs/images/estensione.svg', 'docs/images/dashboard.png', 'docs/images/confronto.png', 'docs/images/discord.png', 'docs/images/guida.png',
     'tests/test_server.py', 'tests/test_launcher.py', 'tests/core.test.js', 'tests/app.test.js',
     'tests/extension.test.js', 'tests/preview_server.py', 'tests/listings.html', 'tests/test_distribution.py', 'tests/test_runtime.py', 'tests/test_hidden_start.py'
 ]
 
 def main():
+    manifest = json.loads((ROOT / 'distribuzione.json').read_text(encoding='utf-8'))
+    if manifest.get('files') != FILES:
+        raise RuntimeError('Aggiorna distribuzione.json: elenco diverso dal pacchetto')
     for name in FILES:
         if not (ROOT / name).is_file():
             raise FileNotFoundError(name)

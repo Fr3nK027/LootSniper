@@ -1,4 +1,4 @@
-"""Start Radar only when its local server is ready; keep logs in the project."""
+"""Start LootSniper only when its local server is ready; keep logs in the project."""
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
@@ -32,7 +32,7 @@ def main(background=False):
     existing = server_status()
     if existing:
         if existing.get("version") != VERSION or existing.get("workspace") != WORKSPACE_ID:
-            print("La porta 8765 è occupata da un'altra copia del Radar o da una versione precedente.")
+            print("La porta 8765 è occupata da un'altra copia di LootSniper o da una versione precedente.")
             print("Chiudi il vecchio server e riprova.")
             return 1
         webbrowser.open(URL)
@@ -60,7 +60,7 @@ def main(background=False):
                 print("Il server non risponde. Dettagli in radar-server.log.")
                 return 1
             webbrowser.open(URL)
-            print("Radar pronto: " + URL)
+            print("LootSniper pronto: " + URL)
             if background:
                 detached = True
                 return 0
@@ -68,7 +68,7 @@ def main(background=False):
             process.wait()
             return process.returncode
         except KeyboardInterrupt:
-            print("Arresto del Radar…")
+            print("Arresto di LootSniper…")
             return 0
         finally:
             if not detached and process.poll() is None:

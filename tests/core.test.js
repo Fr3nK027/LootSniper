@@ -49,10 +49,21 @@ test('damage wins over new condition language; partial words are not damage', ()
 });
 test('restored cards reject invalid links and strip untrusted tag classes', () => {
   const entry = { titolo: '<img src=x onerror=alert(1)>', prezzo: 500, url: 'https://ebay.it/itm/123', platform: 'EBAY',
-    evalData: { stima: 900, vsScore: 900, tags: [{ text: 'test', cls: '" onclick="evil' }] } };
+    evalData: { stima: 900, vsScore: 900, tags: [{ text: 'test', cls: '" onclick="evil' }, { text: 'Brand eco -20%', cls: 't-down' }] } };
   const clean = core.cleanResult(entry);
   assert.equal(clean.evalData.vsScore, 100);
   assert.equal(clean.evalData.tags[0].cls, 't-neutral');
+  assert.equal(clean.evalData.tags[1].text, 'Serie essenziale');
   assert.equal(core.cleanResult({ ...entry, url: 'javascript:alert(1)' }), null);
   assert.equal(core.escapeHtml(entry.titolo), '&lt;img src=x onerror=alert(1)&gt;');
+});
+test('listing explanation separates observed specifications from missing details', () => {
+  const item = { titolo: 'Laptop RTX 4070 con 32 GB RAM', details: '', prezzo: 800,
+    evalData: { stima: 1250 } };
+  const explanation = core.explainListing(item);
+  assert.equal(explanation.difference, 450);
+  assert.ok(explanation.facts.includes('RTX 4070'));
+  assert.ok(explanation.facts.includes('32GB RAM'));
+  assert.ok(explanation.missing.includes('Capacità di archiviazione'));
+  assert.ok(explanation.missing.includes('Processore'));
 });

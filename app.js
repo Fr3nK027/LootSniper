@@ -59,7 +59,7 @@ function restoreFilters() {
 }
 
 async function api(path, options = {}) {
-  if (radarStopped) throw new Error('Radar arrestato. Riapri avvia radar.vbs.');
+  if (radarStopped) throw new Error('LootSniper arrestato. Riaprilo dal collegamento.');
   const response = await fetch(apiBase + path, { ...options, signal: options.signal || AbortSignal.timeout(30000) });
   let payload;
   try { payload = await response.json(); } catch { throw new Error('Risposta del server non valida. Riavvia il server locale.'); }
@@ -171,8 +171,8 @@ async function saveSearch() {
   const name = $('search-name').value.trim();
   if (!name) { logMsg('Dai un nome alla ricerca.', 'log-warn'); $('search-name').focus(); return; }
   let sources;
-  try { sources = getSources(); } catch (error) { logMsg(error.message, 'log-warn'); return; }
-  if (!sources.length) { logMsg('Inserisci una parola chiave o un link.', 'log-warn'); return; }
+  try { sources = getSources(); } catch (error) { logMsg(error.message, 'log-warn'); setScanState('Controlla i link', error.message); return; }
+  if (!sources.length) { setScanState('Da dove partiamo?', 'Scrivi cosa cerchi nel campo a sinistra, per esempio laptop RTX 4070.'); logMsg('Inserisci una parola chiave o un link.', 'log-warn'); return; }
   const entry = { name, vinted: '', ebay: '', subito: '', updatedAt: new Date().toISOString() };
   sources.forEach(source => { entry[source.platform.toLowerCase()] = source.url; });
   const index = savedSearches.findIndex(search => search.name.toLowerCase() === name.toLowerCase());
@@ -203,7 +203,7 @@ function renderAllCards() {
     '<div class="empty"><span class="empty-icon" aria-hidden="true">◎</span><h2>' +
     (bombsArray.length ? 'Nessun risultato con questi filtri' : 'La tua prossima scoperta parte da qui') +
     '</h2><p>' + (bombsArray.length ? 'Prova a cambiare il budget o a rimuovere un filtro.' :
-    'Cerca un portatile gaming, incolla una ricerca oppure importa gli annunci con l’estensione.') + '</p></div>';
+    'Cerca un portatile gaming, incolla una ricerca oppure importa gli annunci con l’estensione.') + '</p><button class="primary" data-empty-action="' + (bombsArray.length ? 'reset' : 'guide') + '">' + (bombsArray.length ? 'Azzera i filtri' : 'Prepara la prima ricerca') + '</button></div>';
   $('count-bombs').textContent = bombsArray.length;
   $('count-scanned').textContent = totalAnalyzed;
   $('count-favorites').textContent = bombsArray.filter(item => favorites.has(item.url)).length;
@@ -227,8 +227,16 @@ function cardTemplate(item) {
   const historyMarkup = history.length > 1 ? '<details class="price-history"><summary>Storico prezzi · ' + history.length +
     ' rilevazioni</summary><ol>' + [...history].reverse().map(point => '<li><time>' + new Date(point.at).toLocaleDateString('it-IT') +
     '</time><span>' + euros.format(point.price) + '</span></li>').join('') + '</ol></details>' : '';
+  const reason = explainListing(item);
+  const reasonMarkup = '<div class="deal-reason"><strong>Perché è nel radar</strong><p>' +
+    (reason.difference > 0 ? euros.format(reason.difference) + ' sotto la stima indicativa.' : 'Salvato in precedenza: il prezzo attuale non è sotto la stima.') +
+    '</p>' + (reason.facts.length ? '<p>Nel testo: ' + reason.facts.map(escapeHtml).join(' · ') + '.</p>' : '') +
+    (reason.warnings.length ? '<p class="deal-warning">Attenzione: ' + reason.warnings.map(escapeHtml).join(', ') + '.</p>' : '') +
+    '<details><summary>Cosa verificare prima di comprare</summary><ul>' +
+    reason.missing.map(label => '<li>' + escapeHtml(label) + ': non riconosciuto nel testo.</li>').join('') +
+    '<li>Condizioni, batteria e configurazione esatta.</li><li>Venditore, spedizione e commissioni.</li></ul></details></div>';
   const preview = item.image ? '<img src="' + escapeHtml(item.image) + '" alt="' + escapeHtml(item.titolo) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span>Nessuna anteprima</span>';
-  return '<article class="card"><div class="card-image">' + preview + '</div><button class="favorite" data-action="favorite" data-url="' +
+  return '<article class="card"><div class="card-image' + (item.image ? '' : ' card-image-empty') + '">' + preview + '</div><button class="favorite" data-action="favorite" data-url="' +
     escapeHtml(item.url) + '" aria-pressed="' + saved + '" aria-label="' + (saved ? 'Rimuovi dai preferiti' : 'Salva preferito') + '">' +
     (saved ? '★' : '☆') + '</button><div class="card-head"><span class="platform ' + item.platform.toLowerCase() + '">' + item.platform +
     '</span><h2 class="card-title">' + escapeHtml(item.titolo) + '</h2><div class="power"><span>Indice hardware ' + data.vsScore +
@@ -237,7 +245,7 @@ function cardTemplate(item) {
     '</div><div class="prices"><div><span class="price-label">Prezzo annuncio</span><strong class="ask-price">' + euros.format(item.prezzo) +
     '</strong></div><div class="estimate"><span>Stima indicativa</span><strong>' + euros.format(data.stima) +
     '</strong><span class="saving">Differenza ' + euros.format(data.margine) +
-    '</span></div></div>' + trend + historyMarkup + '<p class="card-note">Spedizione e commissioni da verificare.</p><time class="card-note" datetime="' +
+    '</span></div></div>' + trend + historyMarkup + reasonMarkup + '<p class="card-note">Spedizione e commissioni da verificare.</p><time class="card-note" datetime="' +
     new Date(item.updatedAt).toISOString() + '">Aggiornato ' + new Date(item.updatedAt).toLocaleDateString('it-IT') +
     '</time></div><div class="card-foot"><label class="compare-label"><input class="compare-check" type="checkbox" data-url="' +
     escapeHtml(item.url) + '" ' + (selectedForVersus.includes(item.url) ? 'checked' : '') + '> Confronta</label><a href="' +
@@ -310,11 +318,17 @@ async function importBrowserListings() {
   finally { importing = false; }
 }
 function extractListings(doc, source) { return RadarListings.collect(doc, source); }
+function setScanState(title, body, help = false) {
+  $('scan-feedback').hidden = false;
+  $('scan-feedback-title').textContent = title;
+  $('scan-feedback-body').textContent = body;
+  $('btn-scan-help').hidden = !help;
+}
 async function runScan() {
   if (radarStopped || scanController) return;
   let sources;
-  try { sources = getSources(); } catch (error) { logMsg(error.message, 'log-warn'); return; }
-  if (!sources.length) { logMsg('Inserisci una parola chiave o almeno un link.', 'log-warn'); $('market-query').focus(); return; }
+  try { sources = getSources(); } catch (error) { logMsg(error.message, 'log-warn'); setScanState('Controlla i link', error.message); return; }
+  if (!sources.length) { setScanState('Da dove partiamo?', 'Scrivi cosa cerchi nel campo a sinistra, per esempio laptop RTX 4070.'); logMsg('Inserisci una parola chiave o almeno un link.', 'log-warn'); $('market-query').focus(); return; }
   scanController = new AbortController();
   const signal = scanController.signal;
   $('btn-scan').disabled = true; $('btn-scan').classList.add('loading'); $('btn-stop').hidden = false;
@@ -322,13 +336,14 @@ async function runScan() {
   $('results-grid').setAttribute('aria-busy', 'true');
   const processed = new Set();
   const deepScan = $('deep-scan').checked;
-  let errors = 0, changed = 0;
+  let errors = 0, changed = 0, unreadable = 0;
   try {
     for (const source of sources) {
       for (let page = 1; page <= (deepScan ? 20 : 1); page++) {
         if (signal.aborted) break;
         const status = source.platform + ' · pagina ' + page;
         $('scan-status').textContent = status;
+        setScanState('Sto cercando le opportunità', status + ' · Puoi interrompere senza perdere i risultati.');
         logMsg('Controllo ' + status, 'log-deep');
         try {
           const url = pageUrl(source.url, source.platform, page);
@@ -342,6 +357,7 @@ async function runScan() {
             changed += Number(upsertListing(item));
           }
           persistResults(); renderAllCards();
+          if (!items.length) unreadable++;
           if (!items.length) logMsg(source.platform + ': nessun annuncio leggibile. Puoi usare l’estensione sulla pagina aperta.', 'log-warn');
           if (!newItems || !payload.hasNext) break;
         } catch (error) {
@@ -351,6 +367,8 @@ async function runScan() {
       }
       if (signal.aborted) break;
     }
+    setScanState(signal.aborted ? 'Ricerca interrotta' : errors || unreadable ? 'Ricerca completata con alcune fonti da verificare' : 'Ricerca completata',
+      changed + ' annunci aggiunti o aggiornati. ' + (errors || unreadable ? 'Alcune pagine non sono accessibili o leggibili: apri la ricerca nel browser e usa l’estensione.' : processed.size ? 'Se non vedi annunci, prova ad allargare i filtri. Vengono salvate le opportunità sotto la stima indicativa.' : 'Nessun annuncio trovato. Prova una parola chiave più generica.'), !!(errors || unreadable));
     logMsg(signal.aborted ? 'Ricerca interrotta. I risultati raccolti sono salvati.' :
       'Ricerca terminata: ' + changed + ' annunci aggiunti o aggiornati' + (errors ? ', ' + errors + ' fonti non raggiungibili.' : '.'), errors ? 'log-warn' : 'log-ok');
   } finally {
@@ -374,7 +392,7 @@ async function importBackup(event) {
   try {
     if (file.size > 10 * 1024 * 1024) throw new Error('Il backup supera 10 MB.');
     const data = JSON.parse((await file.text()).replace(/^\uFEFF/, ''));
-    if (!data || typeof data !== 'object') throw new Error('File Radar non valido.');
+    if (!data || typeof data !== 'object') throw new Error('File LootSniper non valido.');
     if (!Array.isArray(data) && data?.version !== undefined && data.version !== 1) throw new Error('Versione del backup non supportata.');
     if (data.format === 'radar-listings') {
       if (data.version !== 1 || !Array.isArray(data.items) || data.items.length > 5000) throw new Error('Esportazione annunci non valida.');
@@ -388,7 +406,7 @@ async function importBackup(event) {
       return;
     }
     const rows = Array.isArray(data) ? data : data.results;
-    if (!Array.isArray(rows)) throw new Error('Questo file non è un backup Radar.');
+    if (!Array.isArray(rows)) throw new Error('Questo file non è un backup LootSniper.');
     const clean = rows.map(cleanResult).filter(Boolean);
     if (rows.length && !clean.length) throw new Error('Nessun annuncio valido nel file.');
     const combined = new Map(bombsArray.map(item => [item.url, item]));

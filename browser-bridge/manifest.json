@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Radar Usato Browser Bridge",
-  "version": "1.1.0",
-  "description": "Importa e aggiorna gli annunci visibili su Vinted, eBay e Subito nel Radar locale.",
+  "name": "LootSniper Bridge",
+  "version": "1.2.0",
+  "description": "Importa e aggiorna gli annunci visibili su Vinted, eBay e Subito in LootSniper.",
   "permissions": ["activeTab", "alarms", "storage"],
   "host_permissions": [
     "https://*.ebay.it/*",
@@ -14,7 +14,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Radar Usato: importa questa pagina",
+    "default_title": "LootSniper: importa questa pagina",
     "default_popup": "popup.html"
   },
   "content_scripts": [

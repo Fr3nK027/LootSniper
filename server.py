@@ -1,4 +1,4 @@
-"""Local Radar dashboard and validated, durable API. Standard library only."""
+"""Local LootSniper dashboard and validated, durable API. Standard library only."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse, urlunparse
@@ -20,10 +20,10 @@ SEARCHES_FILE = ROOT / "radar-searches.json"
 IMPORTS_FILE = ROOT / "radar-imports.json"
 PLATFORMS = {"VINTED": "vinted.it", "EBAY": "ebay.it", "SUBITO": "subito.it"}
 ALLOWED_HOSTS = {host for domain in PLATFORMS.values() for host in (domain, "www." + domain)}
-STATIC_FILES = {"radar usato 3 market.html", "app.js", "styles.css", "radar-core.js", "radar-runtime.js", "browser-bridge/listings.js"}
+STATIC_FILES = {"radar usato 3 market.html", "app.js", "styles.css", "radar-core.js", "radar-runtime.js", "browser-bridge/listings.js", "experience.css", "radar-guide.js", "assets/lootsniper.svg", "assets/lootsniper.ico"}
 WORKSPACE_ID = hashlib.sha256(str(ROOT).casefold().encode()).hexdigest()[:16]
 PORT = 8765
-VERSION = "5.0"
+VERSION = "6.0"
 MAX_BODY = 2 * 1024 * 1024
 MAX_HTML = 10 * 1024 * 1024
 browser_items_lock = threading.Lock()
@@ -361,7 +361,7 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=PORT)
     parser.add_argument('--auto-stop', action='store_true', help='Arresta il server quando vengono chiuse tutte le dashboard')
     args = parser.parse_args()
-    print(f"Radar Usato locale: http://127.0.0.1:{args.port}")
+    print(f"LootSniper locale: http://127.0.0.1:{args.port}")
     try:
         with RadarServer(("127.0.0.1", args.port), auto_stop=args.auto_stop) as httpd:
             httpd.discord.start()
@@ -370,7 +370,7 @@ if __name__ == "__main__":
             finally:
                 httpd.discord.close()
     except KeyboardInterrupt:
-        print("Radar arrestato.")
+        print("LootSniper arrestato.")
     except OSError as error:
         print(f"Impossibile avviare il server: {error}")
         raise SystemExit(1)

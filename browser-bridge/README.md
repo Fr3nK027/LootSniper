@@ -1,6 +1,6 @@
-# Radar Usato Browser Bridge
+# LootSniper Bridge
 
-Importa gli annunci caricati nelle ricerche Vinted.it, eBay.it e Subito.it nel Radar sul tuo computer.
+Importa gli annunci caricati nelle ricerche Vinted.it, eBay.it e Subito.it in LootSniper sul tuo computer.
 
 ## Installazione o aggiornamento
 
@@ -9,7 +9,7 @@ Importa gli annunci caricati nelle ricerche Vinted.it, eBay.it e Subito.it nel R
 3. Scegli **Carica non pacchettizzata** e seleziona questa cartella.
 4. Se era già installata, premi **Ricarica** sulla scheda dell'estensione.
 5. Ricarica anche le schede dei marketplace già aperte, per attivare il parser aggiornato.
-6. Apri il popup del Radar e premi **Importa questa pagina**. Il popup conferma solo gli annunci effettivamente salvati.
+6. Apri il popup di LootSniper e premi **Importa questa pagina**. Il popup conferma solo gli annunci effettivamente salvati.
 
 ## Ricerche automatiche
 

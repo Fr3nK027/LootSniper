@@ -11,3 +11,5 @@ dist/
 .publish/
 radar-discord.json
 radar-discord.json.tmp
+.runtime/
+.install-test/
