@@ -27,7 +27,7 @@ def main():
     if output.is_symlink() or output.resolve() != ROOT / 'dist':
         raise RuntimeError('Cartella di destinazione non sicura')
     output.mkdir(exist_ok=True)
-    archive_path = output / 'radar-usato-locale.zip'
+    archive_path = output / 'LootSniper-Windows.zip'
     with ZipFile(archive_path, 'w', ZIP_DEFLATED) as archive:
         for name in FILES:
             archive.write(ROOT / name, name)
