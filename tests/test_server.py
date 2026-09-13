@@ -68,6 +68,14 @@ class RadarApiTests(unittest.TestCase):
         for path in ("/server.py", "/radar-searches.json", "/.backups/baseline/app.js", "/%2e%2e/server.py"):
             self.assertEqual(self.request(path)[0], 404)
 
+    def test_radar_server_allows_only_one_process_on_its_port(self):
+        first = server.RadarServer(("127.0.0.1", 0), data_root=Path(self.temp.name))
+        try:
+            with self.assertRaises(OSError):
+                server.RadarServer(("127.0.0.1", first.server_address[1]), data_root=Path(self.temp.name))
+        finally:
+            first.server_close()
+
     def test_save_requires_current_revision(self):
         _, initial, _ = self.request("/api/searches")
         payload = {"searches": [self.sample_search()], "revision": initial["revision"]}

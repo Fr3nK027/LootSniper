@@ -40,7 +40,7 @@ Il pulsante **Giorno / Notte** accanto al logo cambia l’aspetto della dashboar
 
 ![Avvio guidato di LootSniper](docs/images/guida.png)
 
-In seguito usa soltanto il collegamento **LootSniper** sul desktop o nel menu Start: server e dashboard si aprono automaticamente. Non occorre cercare o digitare `127.0.0.1:8765`; quell’indirizzo serve solo come riferimento tecnico per la versione attuale.
+In seguito usa soltanto il collegamento **LootSniper** sul desktop o nel menu Start: server e dashboard si aprono automaticamente. LootSniper impedisce l’avvio contemporaneo di più server sulla stessa porta, così la dashboard comunica sempre con una sola versione. Non occorre cercare o digitare `127.0.0.1:8765`; quell’indirizzo serve solo come riferimento tecnico per la versione attuale.
 
 Per chiudere subito premi **Arresta LootSniper** nella barra laterale. Chiudendo tutte le schede della dashboard, il server termina automaticamente dopo circa 45 secondi; se il browser si arresta senza avvisare, la pulizia avviene dopo circa 3 minuti. Non rimane un CMD da chiudere.
 

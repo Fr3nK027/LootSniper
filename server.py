@@ -12,6 +12,7 @@ import mimetypes
 import os
 import re
 import secrets
+import socket
 import threading
 import time
 from radar_discord import DiscordService
@@ -25,7 +26,7 @@ ALLOWED_HOSTS = {host for domain in PLATFORMS.values() for host in (domain, "www
 STATIC_FILES = {"radar usato 3 market.html", "app.js", "styles.css", "radar-core.js", "radar-runtime.js", "browser-bridge/listings.js", "experience.css", "radar-guide.js", "theme.js", "assets/lootsniper.svg", "assets/lootsniper.ico"}
 WORKSPACE_ID = hashlib.sha256(str(ROOT).casefold().encode()).hexdigest()[:16]
 PORT = 8765
-VERSION = "7.2"
+VERSION = "7.3"
 CATEGORY_FILTERS = {"", "gaming", "component", "nas", "network", "server", "smartphone", "other"}
 MAX_BODY = 2 * 1024 * 1024
 MAX_HTML = 10 * 1024 * 1024
@@ -224,16 +225,33 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def read_json(self):
-        if self.headers.get_content_type() != "application/json":
-            raise ValueError("Invia un corpo application/json")
         length = int(self.headers.get("Content-Length", "0"))
-        if not 0 < length <= MAX_BODY:
+        if self.headers.get_content_type() != "application/json":
+            self.discard_request_body(length)
+            raise ValueError("Invia un corpo application/json")
+        if length > MAX_BODY:
+            self.discard_request_body(length)
+            raise ValueError("Corpo richiesta vuoto o superiore a 2 MB")
+        if length <= 0:
             raise ValueError("Corpo richiesta vuoto o superiore a 2 MB")
         self.connection.settimeout(10)
         data = json.loads(self.rfile.read(length).decode("utf-8"), parse_constant=lambda _: None)
         if not isinstance(data, dict):
             raise ValueError("Il corpo deve essere un oggetto JSON")
         return data
+
+    def discard_request_body(self, length):
+        self.close_connection = True
+        remaining = min(max(length, 0), MAX_BODY + 1)
+        self.connection.settimeout(.1)
+        try:
+            while remaining:
+                chunk = self.rfile.read1(min(65536, remaining))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+        except (OSError, TimeoutError):
+            pass
 
     def do_POST(self):
         if not self.guard():
@@ -350,6 +368,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
+        if getattr(self, "close_connection", False):
+            self.send_header("Connection", "close")
         self.send_cors_headers()
         try:
             self.end_headers()
@@ -386,6 +406,12 @@ class Handler(BaseHTTPRequestHandler):
 
 class RadarServer(ThreadingHTTPServer):
     daemon_threads = True
+    allow_reuse_address = False
+
+    def server_bind(self):
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
     def __init__(self, address, handler=Handler, auto_stop=False, data_root=ROOT):
         super().__init__(address, handler)
