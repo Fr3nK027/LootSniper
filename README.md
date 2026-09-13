@@ -196,6 +196,14 @@ I file dati vengono creati quando necessari. Un progetto appena scaricato parte 
 
 Per conservare annunci o preferiti oltre la sessione, usa **Esporta backup** prima di chiudere e **Importa backup** nella sessione successiva.
 
+### Disinstalla completamente
+
+1. Apri il menu Start e cerca **Disinstalla LootSniper**. In alternativa, fai doppio clic su **Disinstalla LootSniper.cmd** nella cartella scaricata o in `%LOCALAPPDATA%\Programs\LootSniper`.
+2. Scrivi **S** quando viene richiesta la conferma.
+3. Attendi il messaggio **LootSniper è stato disinstallato completamente**.
+
+Il disinstallatore arresta l’app e rimuove il programma, il runtime Python privato, i collegamenti, ricerche, importazioni, log e configurazione Discord. I backup che hai esportato in Download o in altre cartelle rimangono disponibili. La cartella ZIP estratta manualmente da GitHub non fa parte dell’installazione: puoi eliminarla normalmente dopo la disinstallazione.
+
 ## Risoluzione dei problemi
 
 | Problema | Cosa fare |
@@ -250,6 +258,7 @@ Apri [la dashboard di test](http://127.0.0.1:8766/) o [i test del parser](http:/
 | File o cartella | Funzione |
 | --- | --- |
 | `Installa LootSniper.cmd`, `installa.ps1`, `distribuzione.json` | Installazione Windows, runtime verificato e collegamenti |
+| `Disinstalla LootSniper.cmd`, `disinstalla.ps1` | Disinstallazione completa e rimozione dei dati locali dell’app |
 | `avvia radar.vbs`, `avvia radar locale.bat` | Avvio Windows nascosto |
 | `launcher.py` | Avvio, controllo del server e apertura del browser |
 | `server.py` | Server locale e gestione degli archivi |

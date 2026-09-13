@@ -1,10 +1,12 @@
 {
-  "version": "6.2",
+  "version": "6.3",
   "files": [
     ".gitignore",
     "README.md",
     "Installa LootSniper.cmd",
     "installa.ps1",
+    "Disinstalla LootSniper.cmd",
+    "disinstalla.ps1",
     "distribuzione.json",
     "radar-guide.js",
     "theme.js",
@@ -47,6 +49,7 @@
     "tests/listings.html",
     "tests/test_distribution.py",
     "tests/test_runtime.py",
-    "tests/test_hidden_start.py"
+    "tests/test_hidden_start.py",
+    "tests/test_uninstaller.py"
   ]
 }

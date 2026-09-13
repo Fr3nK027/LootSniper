@@ -84,9 +84,16 @@ if (-not $NoShortcuts) {
         $shortcut.Arguments = '"' + (Join-Path $installRoot 'avvia radar.vbs') + '"'
         $shortcut.WorkingDirectory = $installRoot
         $shortcut.IconLocation = (Join-Path $installRoot 'assets\lootsniper.ico') + ',0'
-        $shortcut.Description = 'Trova e confronta portatili gaming usati'
+        $shortcut.Description = 'LootSniper - trova e confronta tecnologia usata'
         $shortcut.Save()
     }
+    $uninstallShortcut = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Programs')) 'Disinstalla LootSniper.lnk'))
+    $uninstallShortcut.TargetPath = $env:ComSpec
+    $uninstallShortcut.Arguments = '/d /c ""' + (Join-Path $installRoot 'Disinstalla LootSniper.cmd') + '""'
+    $uninstallShortcut.WorkingDirectory = $installRoot
+    $uninstallShortcut.IconLocation = (Join-Path $installRoot 'assets\lootsniper.ico') + ',0'
+    $uninstallShortcut.Description = 'LootSniper - disinstallazione completa'
+    $uninstallShortcut.Save()
 }
 Write-Host 'Installazione completata. Avvia LootSniper dal collegamento sul desktop.' -ForegroundColor Green
 if (-not $NoLaunch) { Start-Process -FilePath (Join-Path $env:WINDIR 'System32\wscript.exe') -ArgumentList ('"' + (Join-Path $installRoot 'avvia radar.vbs') + '"') -WindowStyle Hidden }
