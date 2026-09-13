@@ -23,6 +23,7 @@
       <p class="sidebar-copy">Cerca tecnologia usata e confronta in una sola sessione le occasioni da approfondire.</p>
       <div class="source-list">
         <div class="field"><label for="market-query">Cosa stai cercando?</label><input id="market-query" type="search" placeholder="es. NAS, router o laptop RTX 4070" autocomplete="off"><button class="text-button" id="btn-generate-links">Genera i tre link dalla ricerca</button></div>
+        <div class="quick-searches" id="quick-searches" aria-label="Ricerche rapide"><span>Parti da una categoria</span><div><button type="button" data-query="componenti PC">Componenti PC</button><button type="button" data-query="NAS">NAS</button><button type="button" data-query="server">Server</button><button type="button" data-query="smartphone">Smartphone</button><button type="button" data-query="router Wi-Fi">Router</button></div></div>
         <details class="source-details"><summary>Link dei marketplace <span>Personalizza i filtri sui siti</span></summary>
           <div class="field"><label for="link-vinted"><span class="source-dot vinted"></span> Vinted</label><input id="link-vinted" type="url" placeholder="https://www.vinted.it/..." autocomplete="off"><a id="open-vinted" class="source-open" target="_blank" rel="noopener noreferrer" hidden>Apri ricerca Vinted ↗</a></div>
           <div class="field"><label for="link-ebay"><span class="source-dot ebay"></span> eBay</label><input id="link-ebay" type="url" placeholder="https://www.ebay.it/..." autocomplete="off"><a id="open-ebay" class="source-open" target="_blank" rel="noopener noreferrer" hidden>Apri ricerca eBay ↗</a></div>
@@ -52,21 +53,22 @@
       <div class="offline-banner" id="offline-help" hidden>Il server locale non è raggiungibile. Avvia <strong>avvia radar.vbs</strong>: puoi comunque consultare ed esportare gli annunci salvati.</div>
       <section class="scan-feedback" id="scan-feedback" hidden aria-live="polite"><strong id="scan-feedback-title"></strong><p id="scan-feedback-body"></p><button class="text-button" id="btn-scan-help" hidden>Come importare con l’estensione →</button></section>
       <section class="stat-strip" aria-label="Statistiche"><div class="stat"><span>Nel tuo radar</span><strong id="count-bombs">0</strong><small>si azzera a ogni ricerca</small></div><div class="stat"><span>Questa sessione</span><strong id="count-scanned">0</strong><small>annunci analizzati</small></div><div class="stat"><span>Da tenere d’occhio</span><strong id="count-favorites">0</strong><small>annunci preferiti</small></div></section>
-      <div class="section-heading"><h2>Le tue opportunità <span id="results-count" tabindex="-1" role="status">0 risultati</span></h2><div class="top-actions"><button class="secondary" id="btn-export">Esporta backup</button><button class="secondary" id="btn-import-backup">Importa backup</button><details class="archive-menu"><summary>Archivio</summary><div><button class="text-button" id="btn-backup">Backup completo</button><button class="text-button" id="btn-clear">Svuota archivio</button><button class="text-button" id="btn-undo" hidden>Annulla svuotamento</button></div></details></div></div>
+      <div class="section-heading"><div><p class="catalog-kicker">Catalogo dell’usato</p><h2 id="results-title">Annunci nel radar</h2><span id="results-count" tabindex="-1" role="status">0 risultati</span></div><div class="top-actions"><button class="secondary" id="btn-export">Esporta backup</button><button class="secondary" id="btn-import-backup">Importa backup</button><details class="archive-menu"><summary>Archivio</summary><div><button class="text-button" id="btn-backup">Backup completo</button><button class="text-button" id="btn-clear">Svuota archivio</button><button class="text-button" id="btn-undo" hidden>Annulla svuotamento</button></div></details></div></div>
       <input type="file" id="backup-file" accept=".json,application/json" hidden>
       <section class="toolbar" aria-label="Filtri risultati">
-        <input id="search-input" type="search" placeholder="Cerca modello, GPU o caratteristica…" aria-label="Cerca nei risultati">
-        <select id="platform-filter" aria-label="Filtra piattaforma"><option value="">Tutti i marketplace</option><option value="VINTED">Vinted</option><option value="EBAY">eBay</option><option value="SUBITO">Subito</option></select>
-        <select id="sort-order" aria-label="Ordina risultati"><option value="margin-desc">Differenza stimata ↓</option><option value="price-asc">Prezzo più basso</option><option value="price-desc">Prezzo più alto</option><option value="vs-desc">Indice hardware ↓</option><option value="newest">Aggiornati di recente</option></select>
+        <label class="catalog-search"><span>Cerca nei risultati</span><input id="search-input" type="search" placeholder="Marca, modello o caratteristica…" aria-label="Cerca nei risultati"></label>
+        <label class="catalog-select"><span>Marketplace</span><select id="platform-filter" aria-label="Filtra piattaforma"><option value="">Tutti</option><option value="VINTED">Vinted</option><option value="EBAY">eBay</option><option value="SUBITO">Subito</option></select></label>
+        <label class="catalog-select"><span>Ordina per</span><select id="sort-order" aria-label="Ordina risultati"><option value="margin-desc">Migliore occasione</option><option value="price-asc">Prezzo crescente</option><option value="price-desc">Prezzo decrescente</option><option value="vs-desc">Indice hardware</option><option value="newest">Più recenti</option></select></label>
       </section>
       <section class="filter-extras" aria-label="Budget e preferiti">
-        <label>Budget massimo <span><input id="max-price" type="number" min="0" step="50" placeholder="Qualsiasi"> €</span></label>
-        <label>Differenza minima <span><input id="min-margin" type="number" min="0" step="50" placeholder="0"> €</span></label>
-        <label class="favorites-filter"><input id="favorites-only" type="checkbox"> Solo preferiti</label>
+        <label class="filter-chip">Prezzo fino a <span><input id="max-price" type="number" min="0" step="50" placeholder="Qualsiasi"> €</span></label>
+        <label class="filter-chip">Risparmio minimo <span><input id="min-margin" type="number" min="0" step="50" placeholder="0"> €</span></label>
+        <label class="filter-chip favorites-filter"><input id="favorites-only" type="checkbox"> Solo preferiti</label>
         <button class="text-button" id="btn-reset-filters">Azzera filtri</button>
+        <div class="view-switch" role="group" aria-label="Vista risultati"><button id="btn-view-list" type="button" aria-pressed="true" title="Vista elenco">☰ <span>Lista</span></button><button id="btn-view-grid" type="button" aria-pressed="false" title="Vista griglia">▦ <span>Griglia</span></button></div>
       </section>
-      <p class="estimate-note">Le stime e l’indice hardware seguono regole indicative, non quotazioni aggiornate o benchmark. Verifica configurazione, condizioni, spedizione e commissioni nell’annuncio.</p>
-      <section class="grid" id="results-grid" aria-label="Annunci trovati"></section>
+      <p class="estimate-note catalog-note"><strong>Confronta prima di scegliere.</strong> Prezzi e stime sono indicativi: verifica modello, compatibilità, condizioni, venditore, spedizione e commissioni nell’annuncio originale.</p>
+      <section class="grid" id="results-grid" data-view="list" aria-label="Annunci trovati"></section>
       <button class="secondary load-more" id="btn-more" hidden>Mostra altri 60 annunci</button>
       <footer class="main-footer"><span>LootSniper</span><span>I tuoi dati restano sul tuo dispositivo.</span></footer>
     </main>

@@ -101,15 +101,19 @@ L’elenco interno è condiviso con l’estensione soltanto durante la sessione 
 
 ## Valuta, filtra e confronta
 
+- Il catalogo parte in modalità **Lista**: immagine a sinistra, caratteristiche e controlli al centro, prezzo e azioni a destra. È pensato per confrontare rapidamente componenti ed elettronica con una struttura familiare.
+- Premi **Griglia** per una vista più compatta; LootSniper ricorda la vista scelta sul PC.
 - Cerca un modello o una caratteristica nei risultati.
 - Filtra per marketplace, budget massimo e differenza minima.
 - Premi la **stella** sulla scheda per salvarla nei preferiti.
 - Usa **Solo preferiti** per restringere l’archivio.
 - Scegli l’ordinamento; **Mostra altri 60 annunci** carica le schede successive.
-- Premi **Apri annuncio** per verificare l’offerta originale sul marketplace.
+- Premi **Vedi l’annuncio** per verificare l’offerta originale sul marketplace.
 - Leggi **Perché è nel radar** e apri **Cosa verificare prima di comprare**: LootSniper distingue i dati riconosciuti nel testo da quelli ancora mancanti.
 
-Per confrontare due o tre portatili:
+Le scorciatoie **Componenti PC**, **NAS**, **Server**, **Smartphone** e **Router** preparano subito i tre marketplace. La parola chiave resta modificabile prima dell’avvio, quindi puoi precisare marca, modello, capacità o qualsiasi altra caratteristica.
+
+Per confrontare due o tre annunci:
 
 1. Seleziona **Confronta** sulle rispettive schede.
 2. Premi il pulsante **Confronta** nella barra in basso.

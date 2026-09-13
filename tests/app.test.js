@@ -85,6 +85,8 @@ test('generic technology such as NAS and routers remains visible for manual comp
   assert.equal(app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/456',title:'NAS Synology DS224+ 2 bay',price:280,updatedAt:Date.now()})"), true);
   assert.equal(app.run('bombsArray[0].evalData.kind'), 'generic');
   assert.match(app.run('cardTemplate(bombsArray[0])'), /Valutazione manuale/);
+  assert.match(app.run('cardTemplate(bombsArray[0])'), /card-offer/);
+  assert.match(app.run('cardTemplate(bombsArray[0])'), /Vedi l’annuncio/);
   assert.equal(app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/789',title:'Alimentatore per NAS Synology',price:30,updatedAt:Date.now()})"), false);
   app.run('resetRadarResults()');
   assert.equal(app.run('bombsArray.length'), 0);
@@ -107,6 +109,15 @@ test('saved filters restore only valid values and do not become arbitrary HTML',
   assert.equal(app.elements.get('favorites-only').checked, true);
   assert.equal(app.elements.get('sort-order').value, 'margin-desc');
 });
+test('catalog view defaults to list and remembers the optional grid choice', async () => {
+  const gridApp = harness({storage:{'radar-result-view':JSON.stringify('grid')}}); await gridApp.run('initialSync');
+  assert.equal(gridApp.elements.get('results-grid').dataset.view, 'grid');
+  gridApp.run("applyResultView('list')");
+  assert.equal(gridApp.elements.get('results-grid').dataset.view, 'list');
+  assert.equal(JSON.parse(gridApp.memory.get('radar-result-view')), 'list');
+  const defaultApp = harness(); await defaultApp.run('initialSync');
+  assert.equal(defaultApp.elements.get('results-grid').dataset.view, 'list');
+});
 test('price history records changes and survives backup normalization', async () => {
   const app = harness(); await app.run('initialSync');
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/123',title:'Laptop RTX 4070',price:900,updatedAt:Date.now()-2000})");
@@ -125,6 +136,15 @@ test('a new quick query replaces stale generated links but respects manual overr
   app.elements.get('link-ebay').value='https://www.ebay.it/sch/i.html?_nkw=custom';
   app.run("quickQueryDirty = true; manualPlatforms.add('EBAY')");
   assert.match(app.run('getSources()[1].url'), /custom/);
+});
+test('category shortcuts prepare an editable search on every marketplace', async () => {
+  const app = harness(); await app.run('initialSync');
+  assert.equal(app.run("prepareQuickQuery('NAS 4 bay')"), true);
+  assert.equal(app.elements.get('market-query').value, 'NAS 4 bay');
+  assert.match(app.elements.get('link-vinted').value, /NAS%204%20bay/);
+  assert.match(app.elements.get('link-ebay').value, /NAS%204%20bay/);
+  assert.match(app.elements.get('link-subito').value, /NAS%204%20bay/);
+  assert.equal(app.run('quickQueryDirty'), false);
 });
 test('saving a generic electronics search downloads a reusable editable profile', async () => {
   const app = harness(); await app.run('initialSync');

@@ -42,6 +42,7 @@ let undoArchive = readStorage('radar-undo', null);
 if (!undoArchive || !Array.isArray(undoArchive.results) || !Array.isArray(undoArchive.favorites)) undoArchive = null;
 let renderedLimit = 60;
 let quickQueryDirty = false;
+let resultView = readStorage('radar-result-view', 'list') === 'grid' ? 'grid' : 'list';
 const manualPlatforms = new Set();
 const FILTER_IDS = ['search-input', 'platform-filter', 'sort-order', 'max-price', 'min-margin', 'favorites-only'];
 const SESSION_KEY = 'radar-session';
@@ -186,6 +187,16 @@ function marketplaceSearchUrl(platform, query) {
   if (platform === 'EBAY') return 'https://www.ebay.it/sch/i.html?_nkw=' + encoded;
   if (platform === 'SUBITO') return 'https://www.subito.it/annunci-italia/vendita/usato/?q=' + encoded;
   return 'https://www.vinted.it/catalog?search_text=' + encoded;
+}
+function prepareQuickQuery(query) {
+  const clean = String(query || '').trim().slice(0, 200);
+  if (!clean) { $('market-query').focus(); return false; }
+  $('market-query').value = clean;
+  Object.keys(MARKET_HOSTS).forEach(platform => { $('link-' + platform.toLowerCase()).value = marketplaceSearchUrl(platform, clean); });
+  quickQueryDirty = false; manualPlatforms.clear();
+  updateSourceLinks();
+  logMsg('Ricerca pronta per “' + clean + '”. Puoi precisarla prima di avviarla.', 'log-ok');
+  return true;
 }
 function getSources() {
   const query = $('market-query').value.trim();
@@ -332,6 +343,13 @@ function filteredItems() {
     : b.evalData.margine - a.evalData.margine);
   return items;
 }
+function applyResultView(view = resultView) {
+  resultView = view === 'grid' ? 'grid' : 'list';
+  $('results-grid').dataset.view = resultView;
+  $('btn-view-list').setAttribute('aria-pressed', String(resultView === 'list'));
+  $('btn-view-grid').setAttribute('aria-pressed', String(resultView === 'grid'));
+  persist('radar-result-view', resultView);
+}
 function renderAllCards() {
   const focusedUrl = document.activeElement?.dataset?.url;
   const items = filteredItems();
@@ -345,6 +363,8 @@ function renderAllCards() {
   $('count-scanned').textContent = totalAnalyzed;
   $('count-favorites').textContent = bombsArray.filter(item => favorites.has(item.url)).length;
   $('results-count').textContent = items.length + ' risultati' + (items.length > renderedLimit ? ' · primi ' + renderedLimit + ' mostrati' : '');
+  const marketQuery = $('market-query').value.trim();
+  $('results-title').textContent = marketQuery ? 'Risultati per “' + marketQuery.slice(0, 80) + '”' : bombsArray.length ? 'Annunci nel radar' : 'Trova il tuo prossimo acquisto';
   $('btn-more').hidden = items.length <= renderedLimit;
   $('btn-undo').hidden = !undoArchive;
   $('btn-export').disabled = !bombsArray.length;
@@ -375,21 +395,23 @@ function cardTemplate(item) {
     reason.missing.map(label => '<li>' + escapeHtml(label) + ': da verificare nell’annuncio.</li>').join('') +
     (generic ? '<li>Compatibilità, condizioni e garanzia.</li>' : '<li>Condizioni, batteria e configurazione esatta.</li>') +
     '<li>Venditore, spedizione e commissioni.</li></ul></details></div>';
-  const preview = item.image ? '<img src="' + escapeHtml(item.image) + '" alt="' + escapeHtml(item.titolo) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span>Nessuna anteprima</span>';
-  return '<article class="card"><div class="card-image' + (item.image ? '' : ' card-image-empty') + '">' + preview + '</div><button class="favorite" data-action="favorite" data-url="' +
+  const preview = item.image ? '<img src="' + escapeHtml(item.image) + '" alt="' + escapeHtml(item.titolo) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span class="image-placeholder" aria-hidden="true">▧</span><span>Nessuna immagine</span>';
+  const details = item.details ? escapeHtml(item.details.slice(0, 280)) : 'Specifiche non riportate: controlla la descrizione originale.';
+  return '<article class="card"><div class="card-image' + (item.image ? '' : ' card-image-empty') + '">' + preview + '<button class="favorite" data-action="favorite" data-url="' +
     escapeHtml(item.url) + '" aria-pressed="' + saved + '" aria-label="' + (saved ? 'Rimuovi dai preferiti' : 'Salva preferito') + '">' +
-    (saved ? '★' : '☆') + '</button><div class="card-head"><span class="platform ' + item.platform.toLowerCase() + '">' + item.platform +
-    '</span><h2 class="card-title">' + escapeHtml(item.titolo) + '</h2>' + (generic ? '<div class="power"><span>Valutazione manuale</span></div>' : '<div class="power"><span>Indice hardware ' + data.vsScore +
-    '/100</span><span class="power-bar"><i style="width:' + data.vsScore + '%"></i></span></div>') + '</div><div class="card-body"><div class="tags">' +
-    data.tags.map(tag => '<span class="tag ' + tag.cls + '">' + escapeHtml(tag.text) + '</span>').join('') +
-    '</div><div class="prices"><div><span class="price-label">Prezzo annuncio</span><strong class="ask-price">' + euros.format(item.prezzo) +
-    '</strong></div><div class="estimate">' + (generic ? '<span>Confronto consigliato</span><strong>Da valutare</strong><span class="saving">Ordina per prezzo</span>' : '<span>Stima indicativa</span><strong>' + euros.format(data.stima) +
-    '</strong><span class="saving">Differenza ' + euros.format(data.margine) + '</span>') +
-    '</div></div>' + trend + historyMarkup + reasonMarkup + '<p class="card-note">Spedizione e commissioni da verificare.</p><time class="card-note" datetime="' +
+    (saved ? '★' : '☆') + '</button></div><div class="card-head card-info"><div class="listing-kicker"><span class="platform ' + item.platform.toLowerCase() + '">' + item.platform +
+    '</span><span>' + (generic ? 'Prodotto da confrontare' : 'Occasione rilevata') + '</span></div><h2 class="card-title">' + escapeHtml(item.titolo) + '</h2><p class="listing-details">' + details + '</p><div class="tags">' +
+    data.tags.map(tag => '<span class="tag ' + tag.cls + '">' + escapeHtml(tag.text) + '</span>').join('') + '</div>' +
+    (generic ? '<div class="power"><span>Valutazione manuale</span></div>' : '<div class="power"><span>Indice hardware ' + data.vsScore +
+    '/100</span><span class="power-bar"><i style="width:' + data.vsScore + '%"></i></span></div>') + reasonMarkup +
+    '</div><div class="card-body card-offer"><div class="prices"><div><span class="price-label">Prezzo annuncio</span><strong class="ask-price">' + euros.format(item.prezzo) +
+    '</strong></div><div class="estimate">' + (generic ? '<span>Valutazione</span><strong>Da verificare</strong><span class="saving">Confronta i prezzi</span>' : '<span>Stima indicativa</span><strong>' + euros.format(data.stima) +
+    '</strong><span class="saving">Possibile differenza ' + euros.format(data.margine) + '</span>') +
+    '</div></div>' + trend + historyMarkup + '<div class="card-meta"><p class="card-note">Spedizione e commissioni da verificare.</p><time class="card-note" datetime="' +
     new Date(item.updatedAt).toISOString() + '">Aggiornato ' + new Date(item.updatedAt).toLocaleDateString('it-IT') +
     '</time></div><div class="card-foot"><label class="compare-label"><input class="compare-check" type="checkbox" data-url="' +
     escapeHtml(item.url) + '" ' + (selectedForVersus.includes(item.url) ? 'checked' : '') + '> Confronta</label><a href="' +
-    escapeHtml(item.url) + '" target="_blank" rel="noopener noreferrer">Apri annuncio ↗</a></div></article>';
+    escapeHtml(item.url) + '" target="_blank" rel="noopener noreferrer">Vedi l’annuncio ↗</a></div></div></article>';
 }
 function updateCompareBar() {
   $('compare-bar').classList.toggle('active', selectedForVersus.length > 0);
@@ -660,17 +682,17 @@ $('btn-restore-searches').addEventListener('click', async () => {
 $('search-name').addEventListener('keydown', event => { if (event.key === 'Enter') saveSearch(); });
 $('market-query').addEventListener('keydown', event => { if (event.key === 'Enter') runScan(); });
 $('market-query').addEventListener('input', () => { quickQueryDirty = true; manualPlatforms.clear(); });
+$('quick-searches').addEventListener('click', event => {
+  const query = event.target && event.target.dataset ? event.target.dataset.query : '';
+  if (query) prepareQuickQuery(query);
+});
 Object.keys(MARKET_HOSTS).forEach(platform => $('link-' + platform.toLowerCase()).addEventListener('input', () => {
   manualPlatforms.add(platform); $('link-' + platform.toLowerCase()).setCustomValidity('');
   updateSourceLinks();
 }));
 $('btn-generate-links').addEventListener('click', () => {
   const query = $('market-query').value.trim();
-  if (!query) { $('market-query').focus(); return; }
-  Object.keys(MARKET_HOSTS).forEach(platform => { $('link-' + platform.toLowerCase()).value = marketplaceSearchUrl(platform, query); });
-  quickQueryDirty = false; manualPlatforms.clear();
-  updateSourceLinks();
-  logMsg('Link aggiornati per “' + query + '”.', 'log-ok');
+  prepareQuickQuery(query);
 });
 FILTER_IDS.forEach(id => {
   $(id).addEventListener('input', () => { renderedLimit = 60; persistFilters(); renderAllCards(); });
@@ -680,11 +702,13 @@ $('btn-reset-filters').addEventListener('click', () => {
   $('favorites-only').checked = false; persistFilters(); renderAllCards();
 });
 $('btn-more').addEventListener('click', () => { renderedLimit += 60; renderAllCards(); });
+$('btn-view-list').addEventListener('click', () => applyResultView('list'));
+$('btn-view-grid').addEventListener('click', () => applyResultView('grid'));
 document.addEventListener('visibilitychange', () => { if (!document.hidden) importBrowserListings(); });
 async function initializeApp() {
   try { await initializeSession(); }
   catch (error) { logMsg(error.message, 'log-warn'); }
-  restoreFilters(); renderAllCards(); renderSavedSearches();
+  restoreFilters(); applyResultView(); renderAllCards(); renderSavedSearches();
   if (storageWarning) logMsg('Un archivio locale non è leggibile. Il dato originale è stato conservato.', 'log-warn');
   await initializeSearches();
 }
