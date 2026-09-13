@@ -91,6 +91,15 @@ test('generic technology such as NAS and routers remains visible for manual comp
   app.run('resetRadarResults()');
   assert.equal(app.run('bombsArray.length'), 0);
 });
+test('product image, title and action all open the original listing safely', async () => {
+  const app = harness(); await app.run('initialSync');
+  app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/456',title:'NAS Synology DS224+',price:280,updatedAt:Date.now()})");
+  const card = app.run('cardTemplate(bombsArray[0])');
+  assert.match(card, /class="card-image-link"/);
+  assert.match(card, /class="card-title-link"/);
+  assert.equal((card.match(/target="_blank" rel="noopener noreferrer"/g) || []).length, 3);
+  assert.match(card, /aria-label="Apri annuncio: NAS Synology DS224\+"/);
+});
 test('old import snapshots cannot overwrite a more recent price', async () => {
   const app = harness(); await app.run('initialSync');
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/123',title:'Laptop RTX 4070',price:900,updatedAt:Date.now()})");

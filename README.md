@@ -109,7 +109,7 @@ L’elenco interno è condiviso con l’estensione soltanto durante la sessione 
 - Premi la **stella** sulla scheda per salvarla nei preferiti.
 - Usa **Solo preferiti** per restringere l’archivio.
 - Scegli l’ordinamento; **Mostra altri 60 annunci** carica le schede successive.
-- Premi **Vedi l’annuncio** per verificare l’offerta originale sul marketplace.
+- Apri rapidamente un’offerta sul marketplace premendo la sua immagine, il titolo oppure **Vedi l’annuncio**.
 - Leggi **Perché è nel radar** e apri **Cosa verificare prima di comprare**: LootSniper distingue i dati riconosciuti nel testo da quelli ancora mancanti.
 
 Le scorciatoie **Componenti PC**, **NAS**, **Server**, **Smartphone** e **Router** preparano subito i tre marketplace. La parola chiave resta modificabile prima dell’avvio, quindi puoi precisare marca, modello, capacità o qualsiasi altra caratteristica.

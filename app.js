@@ -417,12 +417,14 @@ function cardTemplate(item) {
     reason.missing.map(label => '<li>' + escapeHtml(label) + ': da verificare nell’annuncio.</li>').join('') +
     (generic ? '<li>Compatibilità, condizioni e garanzia.</li>' : '<li>Condizioni, batteria e configurazione esatta.</li>') +
     '<li>Venditore, spedizione e commissioni.</li></ul></details></div>';
-  const preview = item.image ? '<img src="' + escapeHtml(item.image) + '" alt="' + escapeHtml(item.titolo) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span class="image-placeholder" aria-hidden="true">▧</span><span>Nessuna immagine</span>';
+  const listingUrl = escapeHtml(item.url);
+  const openLabel = escapeHtml('Apri annuncio: ' + item.titolo);
+  const preview = item.image ? '<img src="' + escapeHtml(item.image) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span class="image-placeholder" aria-hidden="true">▧</span><span>Nessuna immagine</span>';
   const details = item.details ? escapeHtml(item.details.slice(0, 280)) : 'Specifiche non riportate: controlla la descrizione originale.';
-  return '<article class="card" aria-label="' + escapeHtml(item.titolo + ' · ' + item.platform + ' · ' + euros.format(item.prezzo)) + '"><div class="card-image' + (item.image ? '' : ' card-image-empty') + '">' + preview + '<button class="favorite" data-action="favorite" data-url="' +
-    escapeHtml(item.url) + '" aria-pressed="' + saved + '" aria-label="' + (saved ? 'Rimuovi dai preferiti' : 'Salva preferito') + '">' +
+  return '<article class="card" aria-label="' + escapeHtml(item.titolo + ' · ' + item.platform + ' · ' + euros.format(item.prezzo)) + '"><div class="card-image' + (item.image ? '' : ' card-image-empty') + '"><a class="card-image-link" href="' + listingUrl + '" target="_blank" rel="noopener noreferrer" aria-label="' + openLabel + '">' + preview + '</a><button class="favorite" data-action="favorite" data-url="' +
+    listingUrl + '" aria-pressed="' + saved + '" aria-label="' + (saved ? 'Rimuovi dai preferiti' : 'Salva preferito') + '">' +
     (saved ? '★' : '☆') + '</button></div><div class="card-head card-info"><div class="listing-kicker"><span class="platform ' + item.platform.toLowerCase() + '">' + item.platform +
-    '</span><span>' + (generic ? 'Prodotto da confrontare' : 'Occasione rilevata') + '</span></div><h2 class="card-title">' + escapeHtml(item.titolo) + '</h2><p class="listing-details">' + details + '</p><div class="tags">' +
+    '</span><span>' + (generic ? 'Prodotto da confrontare' : 'Occasione rilevata') + '</span></div><h2 class="card-title"><a class="card-title-link" href="' + listingUrl + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(item.titolo) + '</a></h2><p class="listing-details">' + details + '</p><div class="tags">' +
     data.tags.map(tag => '<span class="tag ' + tag.cls + '">' + escapeHtml(tag.text) + '</span>').join('') + '</div>' +
     (generic ? '<div class="power"><span>Valutazione manuale</span></div>' : '<div class="power"><span>Indice hardware ' + data.vsScore +
     '/100</span><span class="power-bar"><i style="width:' + data.vsScore + '%"></i></span></div>') + reasonMarkup +
@@ -433,7 +435,7 @@ function cardTemplate(item) {
     new Date(item.updatedAt).toISOString() + '">Aggiornato ' + new Date(item.updatedAt).toLocaleDateString('it-IT') +
     '</time></div><div class="card-foot"><label class="compare-label"><input class="compare-check" type="checkbox" data-url="' +
     escapeHtml(item.url) + '" ' + (selectedForVersus.includes(item.url) ? 'checked' : '') + '> Confronta</label><a href="' +
-    escapeHtml(item.url) + '" target="_blank" rel="noopener noreferrer">Vedi l’annuncio ↗</a></div></div></article>';
+    listingUrl + '" target="_blank" rel="noopener noreferrer">Vedi l’annuncio ↗</a></div></div></article>';
 }
 function updateCompareBar() {
   $('compare-bar').classList.toggle('active', selectedForVersus.length > 0);
