@@ -21,7 +21,7 @@ function Remove-LootSniperShortcut([string]$Path, [string]$ExpectedFragment) {
         $shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut($Path)
         $description = [string]$shortcut.Description
         $targetAndArguments = ([string]$shortcut.TargetPath) + ' ' + ([string]$shortcut.Arguments)
-        if ($description.StartsWith('LootSniper') -and $targetAndArguments.IndexOf($ExpectedFragment, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+        if ($targetAndArguments.IndexOf($ExpectedFragment, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
             Remove-Item -LiteralPath $Path -Force
         }
     } catch {
@@ -35,18 +35,19 @@ if (-not $Yes) {
     Write-Host ('Verranno rimossi programma, runtime privato, ricerche, webhook Discord, log e collegamenti da: ' + $installRoot)
     Write-Host 'Gli eventuali backup esportati in altre cartelle non verranno eliminati.'
     $answer = (Read-Host 'Continuare? Scrivi S per confermare').Trim()
-    if ($answer -notmatch '^(s|si|sì)$') {
-        Write-Host 'Disinstallazione annullata. Non è stato modificato nulla.' -ForegroundColor Yellow
+    if ($answer -notmatch '^(s|si)$') {
+        Write-Host 'Disinstallazione annullata. Non e stato modificato nulla.' -ForegroundColor Yellow
         exit 0
     }
 }
 
 if (Test-Path -LiteralPath $installRoot) {
     $item = Get-Item -LiteralPath $installRoot -Force
-    if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'La cartella installata è un collegamento: rimozione interrotta.' }
-    foreach ($marker in @('server.py', 'distribuzione.json', 'Disinstalla LootSniper.cmd', 'disinstalla.ps1')) {
+    if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'La cartella installata e un collegamento: rimozione interrotta.' }
+    # These markers exist in older releases too, so the new uninstaller can remove them safely.
+    foreach ($marker in @('server.py', 'launcher.py', 'distribuzione.json', 'radar usato 3 market.html')) {
         if (-not (Test-Path -LiteralPath (Join-Path $installRoot $marker) -PathType Leaf)) {
-            throw ('La cartella non sembra un’installazione completa di LootSniper. File mancante: ' + $marker)
+            throw ('La cartella non sembra una installazione completa di LootSniper. File mancante: ' + $marker)
         }
     }
 
@@ -61,7 +62,7 @@ if (Test-Path -LiteralPath $installRoot) {
             try { $current = Invoke-RestMethod -Uri 'http://127.0.0.1:8765/api/status' -TimeoutSec 1 } catch { $current = $null }
             if (-not $current -or $current.workspace -ne $expectedWorkspace) { $stopped = $true; break }
         }
-        if (-not $stopped) { throw 'LootSniper non si è arrestato. Premi Arresta LootSniper nella dashboard e riprova.' }
+        if (-not $stopped) { throw 'LootSniper non si e arrestato. Premi Arresta LootSniper nella dashboard e riprova.' }
     }
 }
 
@@ -77,5 +78,5 @@ if (Test-Path -LiteralPath $installRoot) {
     Set-Location ([IO.Path]::GetTempPath())
     Remove-Item -LiteralPath $installRoot -Recurse -Force
 }
-if (Test-Path -LiteralPath $installRoot) { throw 'La cartella di LootSniper non è stata rimossa completamente.' }
-Write-Host 'LootSniper è stato disinstallato completamente.' -ForegroundColor Green
+if (Test-Path -LiteralPath $installRoot) { throw 'La cartella di LootSniper non e stata rimossa completamente.' }
+Write-Host 'LootSniper e stato disinstallato completamente.' -ForegroundColor Green
