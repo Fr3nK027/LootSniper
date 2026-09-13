@@ -107,6 +107,7 @@ L’elenco interno è condiviso con l’estensione soltanto durante la sessione 
 - Premi **Griglia** per una vista più compatta; LootSniper ricorda la vista scelta sul PC.
 - Cerca un modello o una caratteristica nei risultati.
 - Filtra per marketplace, budget massimo e differenza minima.
+- Filtra per categoria: portatili gaming, componenti PC, NAS, router e rete, server, smartphone o altra elettronica.
 - I filtri applicati compaiono sopra gli annunci: premi **×** su un singolo filtro per rimuoverlo senza perdere gli altri.
 - Premi la **stella** sulla scheda per salvarla nei preferiti.
 - Usa **Solo preferiti** per restringere l’archivio.

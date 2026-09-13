@@ -86,15 +86,16 @@ class RadarApiTests(unittest.TestCase):
     def test_search_profiles_preserve_general_electronics_filters(self):
         search = {"name": "NAS economici", "query": "NAS Synology 4 bay", "ebay": "https://www.ebay.it/sch/i.html?_nkw=nas",
                   "vinted": "", "subito": "", "customPlatforms": ["EBAY"], "maxPrice": 450,
-                  "minMargin": None, "platformFilter": "EBAY", "sortOrder": "price-asc",
+                  "minMargin": None, "platformFilter": "EBAY", "categoryFilter": "nas", "sortOrder": "price-asc",
                   "resultQuery": "4 bay", "deepScan": False}
         clean = server.clean_searches([search])[0]
         self.assertEqual(clean["query"], "NAS Synology 4 bay")
         self.assertEqual(clean["customPlatforms"], ["EBAY"])
         self.assertEqual(clean["maxPrice"], 450)
+        self.assertEqual(clean["categoryFilter"], "nas")
         self.assertEqual(clean["sortOrder"], "price-asc")
         self.assertFalse(clean["deepScan"])
-        for invalid in ({**search, "maxPrice": float("nan")}, {**search, "deepScan": "false"},
+        for invalid in ({**search, "maxPrice": float("nan")}, {**search, "deepScan": "false"}, {**search, "categoryFilter": "televisori"},
                         {**search, "customPlatforms": ["UNKNOWN"]}):
             with self.assertRaises(ValueError):
                 server.clean_searches([invalid])

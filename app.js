@@ -44,11 +44,12 @@ let renderedLimit = 60;
 let quickQueryDirty = false;
 let resultView = readStorage('radar-result-view', 'list') === 'grid' ? 'grid' : 'list';
 const manualPlatforms = new Set();
-const FILTER_IDS = ['search-input', 'platform-filter', 'sort-order', 'max-price', 'min-margin', 'favorites-only'];
+const FILTER_IDS = ['search-input', 'platform-filter', 'category-filter', 'sort-order', 'max-price', 'min-margin', 'favorites-only'];
 const SESSION_KEY = 'radar-session';
 const SEARCH_PROFILE_FORMAT = 'lootsniper-search';
 const SEARCH_PROFILE_VERSION = 1;
 const SORT_ORDERS = ['margin-desc', 'price-asc', 'price-desc', 'vs-desc', 'newest'];
+const CATEGORY_LABELS = { gaming: 'Portatili gaming', component: 'Componenti PC', nas: 'NAS', network: 'Router e rete', server: 'Server', smartphone: 'Smartphone', other: 'Altra elettronica' };
 
 function resetBrowserSession(session) {
   bombsArray = []; favorites = new Set(); savedSearches = []; selectedForVersus = [];
@@ -80,6 +81,7 @@ function restoreFilters() {
   if (!values || typeof values !== 'object' || Array.isArray(values)) return;
   $('search-input').value = typeof values['search-input'] === 'string' ? values['search-input'].slice(0, 500) : '';
   $('platform-filter').value = Object.hasOwn(MARKET_HOSTS, values['platform-filter']) ? values['platform-filter'] : '';
+  $('category-filter').value = Object.hasOwn(CATEGORY_LABELS, values['category-filter']) ? values['category-filter'] : '';
   $('sort-order').value = SORT_ORDERS.includes(values['sort-order']) ? values['sort-order'] : 'margin-desc';
   ['max-price', 'min-margin'].forEach(id => { $(id).value = values[id] !== '' && Number.isFinite(Number(values[id])) && Number(values[id]) >= 0 ? String(values[id]) : ''; });
   $('favorites-only').checked = values['favorites-only'] === true;
@@ -163,6 +165,7 @@ function loadSavedSearch(search) {
   $('max-price').value = search.maxPrice === null || search.maxPrice === undefined ? '' : String(search.maxPrice);
   $('min-margin').value = search.minMargin === null || search.minMargin === undefined ? '' : String(search.minMargin);
   $('platform-filter').value = Object.hasOwn(MARKET_HOSTS, search.platformFilter) ? search.platformFilter : '';
+  $('category-filter').value = Object.hasOwn(CATEGORY_LABELS, search.categoryFilter) ? search.categoryFilter : '';
   $('sort-order').value = SORT_ORDERS.includes(search.sortOrder) ? search.sortOrder : 'margin-desc';
   $('favorites-only').checked = false;
   $('deep-scan').checked = search.deepScan !== false;
@@ -240,6 +243,7 @@ function searchProfile(entry) {
       maxPrice: entry.maxPrice ?? null,
       minMargin: entry.minMargin ?? null,
       platform: entry.platformFilter || '',
+      category: entry.categoryFilter || '',
       order: entry.sortOrder || 'margin-desc',
       text: entry.resultQuery || ''
     },
@@ -278,6 +282,8 @@ function parseSearchProfile(data) {
   entry.minMargin = optionalProfileNumber(filters.minMargin, 'La differenza minima');
   entry.platformFilter = filters.platform ?? '';
   if (entry.platformFilter !== '' && !Object.hasOwn(MARKET_HOSTS, entry.platformFilter)) throw new Error('Filtro marketplace non valido.');
+  entry.categoryFilter = filters.category ?? '';
+  if (entry.categoryFilter !== '' && !Object.hasOwn(CATEGORY_LABELS, entry.categoryFilter)) throw new Error('Filtro categoria non valido.');
   entry.sortOrder = filters.order ?? 'margin-desc';
   if (!SORT_ORDERS.includes(entry.sortOrder)) throw new Error('Ordinamento non valido.');
   entry.resultQuery = filters.text ?? '';
@@ -318,6 +324,7 @@ async function saveSearch() {
     entry = { name, query: $('market-query').value.trim().slice(0, 200), vinted: '', ebay: '', subito: '',
       customPlatforms: [...manualPlatforms], maxPrice: optionalProfileNumber($('max-price').value, 'Il budget massimo'),
       minMargin: optionalProfileNumber($('min-margin').value, 'La differenza minima'), platformFilter: $('platform-filter').value,
+      categoryFilter: $('category-filter').value,
       sortOrder: SORT_ORDERS.includes($('sort-order').value) ? $('sort-order').value : 'margin-desc',
       resultQuery: $('search-input').value.slice(0, 500), deepScan: $('deep-scan').checked, updatedAt: new Date().toISOString() };
   } catch (error) { logMsg(error.message, 'log-warn'); return; }
@@ -329,11 +336,16 @@ async function saveSearch() {
   downloadSearchProfile(entry);
   logMsg('Ricerca “' + name + '” salvata. Il file modificabile è stato scaricato.', 'log-ok');
 }
+function resultCategory(item) {
+  if (item.evalData.kind !== 'generic') return 'gaming';
+  return { 'Componente PC': 'component', NAS: 'nas', 'Router / rete': 'network', Server: 'server', Smartphone: 'smartphone' }[item.evalData.gpuName] || 'other';
+}
 function filteredItems() {
   const query = normalizeListingText($('search-input').value);
   const maxPrice = Number($('max-price').value) || Infinity;
   const minMargin = $('min-margin').value === '' ? -Infinity : Number($('min-margin').value);
   const items = bombsArray.filter(item => (!$('platform-filter').value || item.platform === $('platform-filter').value)
+    && (!$('category-filter').value || resultCategory(item) === $('category-filter').value)
     && (!$('favorites-only').checked || favorites.has(item.url))
     && item.prezzo <= maxPrice && item.evalData.margine >= minMargin
     && normalizeListingText(item.titolo + ' ' + item.evalData.gpuName + ' ' + item.details).includes(query));
@@ -354,8 +366,10 @@ function renderActiveFilters() {
   const entries = [];
   const resultQuery = $('search-input').value.trim();
   const platform = $('platform-filter').value;
+  const category = $('category-filter').value;
   if (resultQuery) entries.push(['search-input', 'Testo: “' + resultQuery.slice(0, 60) + '”']);
   if (platform) entries.push(['platform-filter', 'Marketplace: ' + (platform === 'EBAY' ? 'eBay' : platform[0] + platform.slice(1).toLowerCase())]);
+  if (category) entries.push(['category-filter', 'Categoria: ' + CATEGORY_LABELS[category]]);
   if ($('max-price').value !== '') entries.push(['max-price', 'Fino a ' + $('max-price').value + ' €']);
   if ($('min-margin').value !== '') entries.push(['min-margin', 'Risparmio da ' + $('min-margin').value + ' €']);
   if ($('favorites-only').checked) entries.push(['favorites-only', 'Solo preferiti']);
@@ -364,7 +378,7 @@ function renderActiveFilters() {
     '<button type="button" data-clear-filter="' + id + '" aria-label="Rimuovi filtro ' + escapeHtml(label) + '">' + escapeHtml(label) + ' <b aria-hidden="true">×</b></button>').join('') : '';
 }
 function clearActiveFilter(id) {
-  if (!['search-input', 'platform-filter', 'max-price', 'min-margin', 'favorites-only'].includes(id)) return false;
+  if (!['search-input', 'platform-filter', 'category-filter', 'max-price', 'min-margin', 'favorites-only'].includes(id)) return false;
   if (id === 'favorites-only') $(id).checked = false; else $(id).value = '';
   renderedLimit = 60; persistFilters(); renderAllCards();
   const nextFilter = $('active-filters').querySelector?.('button');
@@ -725,7 +739,7 @@ FILTER_IDS.forEach(id => {
   $(id).addEventListener('input', () => { renderedLimit = 60; persistFilters(); renderAllCards(); });
 });
 $('btn-reset-filters').addEventListener('click', () => {
-  ['search-input', 'platform-filter', 'max-price', 'min-margin'].forEach(id => { $(id).value = ''; });
+  ['search-input', 'platform-filter', 'category-filter', 'max-price', 'min-margin'].forEach(id => { $(id).value = ''; });
   $('favorites-only').checked = false; persistFilters(); renderAllCards();
 });
 $('active-filters').addEventListener('click', event => {

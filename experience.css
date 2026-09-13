@@ -1,4 +1,4 @@
-/* LootSniper 7.0 — multi-category product catalog. */
+/* LootSniper 7.1 — filterable multi-category product catalog. */
 :root,
 :root[data-theme="light"] {
   --bg: #f5f7f8;
@@ -236,7 +236,7 @@ h1 span { color: var(--accent); }
 .archive-menu > summary:hover { color: var(--accent); background: var(--accent-soft); }
 .archive-menu > div { background: var(--surface); border-color: var(--line); border-radius: 13px; box-shadow: var(--shadow); }
 
-.toolbar { grid-template-columns: minmax(250px, 1fr) 170px 190px; gap: 10px; margin-bottom: 13px; padding: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-small); }
+.toolbar { grid-template-columns: minmax(220px, 1fr) 145px 160px 180px; gap: 10px; margin-bottom: 13px; padding: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-small); }
 .toolbar input, .toolbar select { font-size: 12px; }
 .catalog-search, .catalog-select { display: grid; gap: 6px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .04em; }
 .catalog-search span, .catalog-select span { padding-left: 3px; }

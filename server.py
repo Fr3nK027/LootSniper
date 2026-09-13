@@ -25,7 +25,8 @@ ALLOWED_HOSTS = {host for domain in PLATFORMS.values() for host in (domain, "www
 STATIC_FILES = {"radar usato 3 market.html", "app.js", "styles.css", "radar-core.js", "radar-runtime.js", "browser-bridge/listings.js", "experience.css", "radar-guide.js", "theme.js", "assets/lootsniper.svg", "assets/lootsniper.ico"}
 WORKSPACE_ID = hashlib.sha256(str(ROOT).casefold().encode()).hexdigest()[:16]
 PORT = 8765
-VERSION = "7.0"
+VERSION = "7.1"
+CATEGORY_FILTERS = {"", "gaming", "component", "nas", "network", "server", "smartphone", "other"}
 MAX_BODY = 2 * 1024 * 1024
 MAX_HTML = 10 * 1024 * 1024
 browser_items_lock = threading.Lock()
@@ -124,6 +125,9 @@ def clean_searches(searches):
         platform_filter = item.get("platformFilter", "")
         if platform_filter not in ("", *PLATFORMS):
             raise ValueError("Filtro marketplace non valido")
+        category_filter = item.get("categoryFilter", "")
+        if category_filter not in CATEGORY_FILTERS:
+            raise ValueError("Filtro categoria non valido")
         sort_order = item.get("sortOrder", "margin-desc")
         if sort_order not in {"margin-desc", "price-asc", "price-desc", "vs-desc", "newest"}:
             raise ValueError("Ordinamento non valido")
@@ -133,7 +137,7 @@ def clean_searches(searches):
         deep_scan = item.get("deepScan", True)
         if not isinstance(deep_scan, bool):
             raise ValueError("Impostazione scansione non valida")
-        entry.update({"platformFilter": platform_filter, "sortOrder": sort_order,
+        entry.update({"platformFilter": platform_filter, "categoryFilter": category_filter, "sortOrder": sort_order,
                       "resultQuery": result_query, "deepScan": deep_scan})
         clean.append(entry)
         names.add(name.casefold())
