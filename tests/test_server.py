@@ -83,6 +83,22 @@ class RadarApiTests(unittest.TestCase):
             self.assertEqual(self.request("/api/searches", {"searches": value, "revision": server.revision([])})[0], 400)
         self.assertFalse(self.searches.exists())
 
+    def test_search_profiles_preserve_general_electronics_filters(self):
+        search = {"name": "NAS economici", "query": "NAS Synology 4 bay", "ebay": "https://www.ebay.it/sch/i.html?_nkw=nas",
+                  "vinted": "", "subito": "", "customPlatforms": ["EBAY"], "maxPrice": 450,
+                  "minMargin": None, "platformFilter": "EBAY", "sortOrder": "price-asc",
+                  "resultQuery": "4 bay", "deepScan": False}
+        clean = server.clean_searches([search])[0]
+        self.assertEqual(clean["query"], "NAS Synology 4 bay")
+        self.assertEqual(clean["customPlatforms"], ["EBAY"])
+        self.assertEqual(clean["maxPrice"], 450)
+        self.assertEqual(clean["sortOrder"], "price-asc")
+        self.assertFalse(clean["deepScan"])
+        for invalid in ({**search, "maxPrice": float("nan")}, {**search, "deepScan": "false"},
+                        {**search, "customPlatforms": ["UNKNOWN"]}):
+            with self.assertRaises(ValueError):
+                server.clean_searches([invalid])
+
     def test_import_deduplicates_batch_and_updates_prices(self):
         payload = self.sample_import()
         payload["items"].append({**payload["items"][0], "url": "https://ebay.it/itm/123456789?another=2"})

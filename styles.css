@@ -32,6 +32,9 @@ button { cursor: pointer; }
 .save-search-row input { min-width: 0; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; outline: 0; font: 12px 'Trebuchet MS', sans-serif; }
 .save-search-row input:focus { border-color: var(--cyan); }
 .save-search-row .secondary { padding: 9px 11px; font-size: 12px; }
+.saved-file-note { margin: 0; color: var(--muted); font: 10px/1.45 'Trebuchet MS', sans-serif; }
+.saved-file-actions { display: flex; gap: 10px; }
+.saved-file-actions .text-button { padding: 2px 0; }
 .saved-search-list { display: grid; gap: 5px; max-height: 150px; overflow-y: auto; }
 .saved-empty { color: var(--muted); font: 11px 'Trebuchet MS', sans-serif; }
 .saved-search { display: grid; grid-template-columns: 1fr 27px 27px; gap: 4px; align-items: center; }

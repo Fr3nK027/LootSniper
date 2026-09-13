@@ -7,6 +7,7 @@ from urllib.error import HTTPError, URLError
 import argparse
 import hashlib
 import json
+import math
 import mimetypes
 import os
 import re
@@ -24,7 +25,7 @@ ALLOWED_HOSTS = {host for domain in PLATFORMS.values() for host in (domain, "www
 STATIC_FILES = {"radar usato 3 market.html", "app.js", "styles.css", "radar-core.js", "radar-runtime.js", "browser-bridge/listings.js", "experience.css", "radar-guide.js", "theme.js", "assets/lootsniper.svg", "assets/lootsniper.ico"}
 WORKSPACE_ID = hashlib.sha256(str(ROOT).casefold().encode()).hexdigest()[:16]
 PORT = 8765
-VERSION = "6.4"
+VERSION = "6.5"
 MAX_BODY = 2 * 1024 * 1024
 MAX_HTML = 10 * 1024 * 1024
 browser_items_lock = threading.Lock()
@@ -97,7 +98,14 @@ def clean_searches(searches):
         name = item["name"].strip()
         if not name or len(name) > 80 or name.casefold() in names:
             raise ValueError("I nomi delle ricerche devono essere unici, da 1 a 80 caratteri")
-        entry = {"name": name, "updatedAt": str(item.get("updatedAt", ""))[:40]}
+        query = item.get("query", "")
+        if not isinstance(query, str) or len(query) > 200:
+            raise ValueError("Testo della ricerca non valido")
+        custom_platforms = item.get("customPlatforms", [])
+        if (not isinstance(custom_platforms, list) or any(value not in PLATFORMS for value in custom_platforms)):
+            raise ValueError("Marketplace personalizzati non validi")
+        entry = {"name": name, "query": query.strip(), "customPlatforms": list(dict.fromkeys(custom_platforms)),
+                 "updatedAt": str(item.get("updatedAt", ""))[:40]}
         for platform in PLATFORMS:
             value = item.get(platform.lower(), "")
             if not isinstance(value, str):
@@ -107,6 +115,26 @@ def clean_searches(searches):
             entry[platform.lower()] = value.strip()
         if not any(entry[key.lower()] for key in PLATFORMS):
             raise ValueError("Ogni ricerca deve contenere almeno un link")
+        for key in ("maxPrice", "minMargin"):
+            value = item.get(key)
+            if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float))
+                                      or not math.isfinite(value) or not 0 <= value <= 100000):
+                raise ValueError("Filtro numerico non valido")
+            entry[key] = value
+        platform_filter = item.get("platformFilter", "")
+        if platform_filter not in ("", *PLATFORMS):
+            raise ValueError("Filtro marketplace non valido")
+        sort_order = item.get("sortOrder", "margin-desc")
+        if sort_order not in {"margin-desc", "price-asc", "price-desc", "vs-desc", "newest"}:
+            raise ValueError("Ordinamento non valido")
+        result_query = item.get("resultQuery", "")
+        if not isinstance(result_query, str) or len(result_query) > 500:
+            raise ValueError("Filtro testo non valido")
+        deep_scan = item.get("deepScan", True)
+        if not isinstance(deep_scan, bool):
+            raise ValueError("Impostazione scansione non valida")
+        entry.update({"platformFilter": platform_filter, "sortOrder": sort_order,
+                      "resultQuery": result_query, "deepScan": deep_scan})
         clean.append(entry)
         names.add(name.casefold())
     return clean

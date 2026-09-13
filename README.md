@@ -72,7 +72,7 @@ Per la diagnostica con terminale visibile usa `python launcher.py` e chiudi con 
 6. Premi **Esegui ricerca** e segui il messaggio di stato. Il riquadro **Attività** contiene i dettagli tecnici.
 7. Per fermare il lavoro premi **Interrompi ricerca**: quanto raccolto rimane salvato.
 
-Ogni volta che premi **Esegui ricerca**, LootSniper svuota il radar precedente e riparte da zero. Anche un nuovo avvio azzera annunci, preferiti, filtri, importazioni e ricerche salvate. Tema e configurazione Discord rimangono memorizzati.
+Ogni volta che premi **Esegui ricerca**, LootSniper svuota il radar precedente e riparte da zero. Anche un nuovo avvio azzera annunci, preferiti, filtri, importazioni e l’elenco temporaneo delle ricerche. Tema, configurazione Discord e file ricerca già scaricati rimangono disponibili.
 
 Per i portatili gaming riconosciuti, LootSniper evidenzia quelli con prezzo inizialmente entro il 95% della stima indicativa. NAS, router e altri prodotti vengono comunque mostrati e ordinati per prezzo: in questi casi la valutazione è manuale perché non viene inventata una quotazione senza dati affidabili.
 
@@ -82,10 +82,22 @@ Alcuni marketplace possono bloccare la lettura diretta o caricare gli annunci so
 
 1. Prepara i link.
 2. Scrivi un nome in **Nome della ricerca**.
-3. Premi **Salva**.
-4. Durante la sessione premi il nome per ricaricare i link, **▶** per eseguirli o **×** per eliminare la ricerca.
+3. Imposta, se servono, budget, differenza minima, marketplace, ordinamento e **Più pagine**.
+4. Premi **Salva**. Il browser scarica un file con un nome come `LootSniper-NAS-economici.json`.
+5. Durante la sessione premi il nome per ricaricare la ricerca, **▶** per eseguirla o **×** per rimuoverla dall’elenco.
+6. In futuro premi **Importa file ricerca**, scegli il JSON e controlla i dati caricati. Premi **Esegui ricerca** per avviarla.
 
-Le ricerche salvate sono condivise con l’estensione durante la sessione corrente e vengono azzerate al riavvio dell’app.
+Il file conserva nome, parole chiave, marketplace, eventuali URL personalizzati, budget, filtri, ordinamento e profondità della scansione. Non contiene risultati, preferiti o webhook Discord. Puoi conservarlo in qualsiasi cartella, inviarlo a un altro PC con LootSniper o modificarlo con Blocco note.
+
+Nel JSON, modifica liberamente `name`, `query`, `filters` e `deepScan`. Dentro `marketplaces` usa:
+
+- `true` per creare automaticamente il link del marketplace dalla nuova `query`;
+- `false` per escludere quel marketplace;
+- un URL HTTPS completo per mantenere filtri personalizzati impostati sul sito.
+
+Questo formato non dipende dal tipo di prodotto: puoi creare profili per PC gaming, componenti, NAS, server, cellulari, router, monitor e altra elettronica. Conserva virgolette, virgole e parentesi del JSON; se la sintassi non è valida, LootSniper rifiuta il file e mostra il motivo senza cambiare la ricerca corrente.
+
+L’elenco interno è condiviso con l’estensione soltanto durante la sessione e viene azzerato al riavvio. I file scaricati non vengono cancellati: sono il modo previsto per riutilizzare una ricerca in una sessione futura.
 
 ## Valuta, filtra e confronta
 
@@ -177,7 +189,8 @@ Se non hai annunci ma vuoi salvare le ricerche, usa **Archivio → Backup comple
 
 | Dato | Dove si trova |
 | --- | --- |
-| Ricerche condivise con l’estensione | `radar-searches.json`, azzerato a ogni avvio |
+| Elenco temporaneo condiviso con l’estensione | `radar-searches.json`, azzerato a ogni avvio |
+| Profili di ricerca modificabili | File `LootSniper-*.json` nella cartella download scelta nel browser |
 | Annunci importati dall’estensione | `radar-imports.json`, azzerato a ogni avvio |
 | Risultati, preferiti, filtri e recupero archivio | Memoria del browser, azzerata per ogni nuova sessione |
 | Configurazione privata Discord, coda e invii confermati | `radar-discord.json` |

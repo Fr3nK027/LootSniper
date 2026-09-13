@@ -27,7 +27,7 @@
     $('btn-generate-links').click();
     $('max-price').value = $('guide-budget').value;
     persistFilters(); renderAllCards(); guide.close(); $('btn-scan').focus();
-    setScanState('Ricerca pronta', 'Premi Esegui ricerca. Puoi salvarla con un nome per riutilizzarla durante questa sessione.');
+    setScanState('Ricerca pronta', 'Premi Esegui ricerca. Con Salva crei anche un file modificabile da riutilizzare in futuro.');
   });
   $('btn-settings').addEventListener('click', () => settings.showModal());
   $('btn-close-settings').addEventListener('click', () => settings.close());

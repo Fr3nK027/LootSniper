@@ -32,6 +32,9 @@
       <div class="saved-searches">
         <p class="kicker">Le mie ricerche</p>
         <div class="save-search-row"><input id="search-name" type="text" aria-label="Nome della ricerca" placeholder="Nome della ricerca" maxlength="80"><button class="secondary" id="btn-save-search">Salva</button></div>
+        <p class="saved-file-note">Salva crea anche un file modificabile e riutilizzabile.</p>
+        <div class="saved-file-actions"><button class="text-button" id="btn-import-search">Importa file ricerca</button></div>
+        <input type="file" id="search-profile-file" accept=".json,application/json" hidden>
         <div class="saved-search-list" id="saved-search-list"></div><small id="sync-status" class="helper">Caricamento ricerche…</small>
         <button class="text-button" id="btn-restore-searches" hidden>Recupera ricerche dalla copia locale</button>
       </div>
@@ -90,7 +93,7 @@
     <div class="dialog-heading"><h2 id="guide-title" tabindex="-1">Benvenuto in LootSniper</h2><button class="secondary" id="guide-close" aria-label="Salta la guida">×</button></div>
     <section data-step="0"><p>Le occasioni tecnologiche che cerchi, tutte in un solo posto. Bastano tre mosse.</p><ol class="guide-steps"><li><span class="guide-number">1</span><div>Cerca<small>Una parola chiave per Vinted, eBay e Subito.</small></div></li><li><span class="guide-number">2</span><div>Valuta<small>Prezzi, caratteristiche e dettagli da verificare.</small></div></li><li><span class="guide-number">3</span><div>Scegli<small>Salva i preferiti e confronta fino a tre annunci.</small></div></li></ol><p class="helper">Ogni nuova ricerca parte da un radar vuoto. Tema e Discord rimangono configurati.</p></section>
     <section data-step="1" hidden><p>Parti da un prodotto o da un modello. Può essere un NAS, un router o un portatile gaming.</p><div class="guide-fields"><div class="field"><label for="guide-query">Cosa cerchi?</label><input id="guide-query" type="search" maxlength="200" required placeholder="es. NAS Synology economico"></div><div class="field"><label for="guide-budget">Budget massimo (€) · facoltativo</label><input id="guide-budget" type="number" min="1" max="100000" step="1" placeholder="es. 300"></div></div><p class="helper">Il budget filtra i risultati mostrati nella dashboard.</p></section>
-    <section data-step="2" hidden><p>Premi <strong>Esegui ricerca</strong> nella dashboard per cominciare. Salva la ricerca con un nome se vuoi ritrovarla.</p><ol class="guide-steps"><li><div>Un sito richiede una verifica?<small>Aprilo nel browser e usa l’estensione. Trovi i passaggi in Impostazioni.</small></div></li><li><div>Vuoi le bombe su Discord?<small>Aggiungi il webhook in Impostazioni → Discord. Puoi farlo anche dopo.</small></div></li></ol><p class="helper">Le stime aiutano a scegliere cosa approfondire: controlla sempre l’annuncio originale.</p></section>
+    <section data-step="2" hidden><p>Premi <strong>Esegui ricerca</strong> nella dashboard per cominciare. Con <strong>Salva</strong> ottieni anche un file ricerca da conservare, modificare e importare in futuro.</p><ol class="guide-steps"><li><div>Un sito richiede una verifica?<small>Aprilo nel browser e usa l’estensione. Trovi i passaggi in Impostazioni.</small></div></li><li><div>Vuoi le bombe su Discord?<small>Aggiungi il webhook in Impostazioni → Discord. Puoi farlo anche dopo.</small></div></li></ol><p class="helper">Le stime aiutano a scegliere cosa approfondire: controlla sempre l’annuncio originale.</p></section>
     <div class="guide-actions"><button class="secondary" id="guide-back" hidden>Indietro</button><button class="primary" id="guide-next">Continua</button></div>
   </dialog>
 </body>

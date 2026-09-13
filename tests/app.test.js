@@ -9,15 +9,18 @@ const appSource = fs.readFileSync(path.join(__dirname, '../app.js'), 'utf8');
 function harness({storage = {}, searches = [], revision = 'v1', session = 'session-a', storedSession = session} = {}) {
   const initialStorage = {...storage};
   if (storedSession !== null && !Object.hasOwn(initialStorage, 'radar-session')) initialStorage['radar-session'] = JSON.stringify(storedSession);
-  const memory = new Map(Object.entries(initialStorage)), elements = new Map(), requests = [];
+  const memory = new Map(Object.entries(initialStorage)), elements = new Map(), requests = [], downloads = [], blobs = [];
   function element() {
     return { value: '', checked: false, hidden: false, disabled: false, children: [], dataset: {},
       innerHTML: '', textContent: '', files: [], classList: {toggle(){}, add(){}, remove(){}},
       addEventListener(){}, setAttribute(){}, removeAttribute(){}, append(child){this.children.push(child);},
-      setCustomValidity(){}, reportValidity(){}, focus(){}, click(){}, showModal(){}, close(){} };
+      setCustomValidity(){}, reportValidity(){}, focus(){}, click(){ if (this.download) downloads.push({filename:this.download,url:this.href}); }, showModal(){}, close(){} };
   }
+  class BrowserURL extends URL {}
+  BrowserURL.createObjectURL = blob => { blobs.push(blob); return 'blob:lootsniper-' + blobs.length; };
+  BrowserURL.revokeObjectURL = () => {};
   const context = vm.createContext({
-    URL, Blob, Intl, Date, AbortSignal, AbortController, console, Map, Set, Promise,
+    URL:BrowserURL, Blob, Intl, Date, AbortSignal, AbortController, console, Map, Set, Promise,
     setInterval(){}, setTimeout, location: {protocol:'http:'},
     document: { hidden: true, getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); },
       createElement: element, addEventListener(){} },
@@ -30,7 +33,7 @@ function harness({storage = {}, searches = [], revision = 'v1', session = 'sessi
     }
   });
   vm.runInContext(coreSource + '\n' + appSource, context);
-  return {context,memory,elements,requests,run:code=>vm.runInContext(code,context)};
+  return {context,memory,elements,requests,downloads,blobs,run:code=>vm.runInContext(code,context)};
 }
 const localSearch = {name:'Locale',ebay:'https://ebay.it/sch/i.html?_nkw=laptop'};
 const serverSearch = {name:'Server',vinted:'https://vinted.it/catalog?search_text=laptop'};
@@ -122,6 +125,38 @@ test('a new quick query replaces stale generated links but respects manual overr
   app.elements.get('link-ebay').value='https://www.ebay.it/sch/i.html?_nkw=custom';
   app.run("quickQueryDirty = true; manualPlatforms.add('EBAY')");
   assert.match(app.run('getSources()[1].url'), /custom/);
+});
+test('saving a generic electronics search downloads a reusable editable profile', async () => {
+  const app = harness(); await app.run('initialSync');
+  app.elements.get('search-name').value = 'NAS economici';
+  app.elements.get('market-query').value = 'NAS Synology 4 bay';
+  app.elements.get('max-price').value = '450';
+  app.elements.get('sort-order').value = 'price-asc';
+  app.run("$('deep-scan').checked = true; quickQueryDirty = true");
+  await app.run('saveSearch()');
+  assert.equal(app.downloads.length, 1);
+  assert.equal(app.downloads[0].filename, 'LootSniper-NAS-economici.json');
+  const profile = JSON.parse(await app.blobs[0].text());
+  assert.equal(profile.format, 'lootsniper-search');
+  assert.equal(profile.query, 'NAS Synology 4 bay');
+  assert.equal(profile.marketplaces.ebay, true);
+  assert.equal(profile.filters.maxPrice, 450);
+  assert.equal(profile.filters.order, 'price-asc');
+});
+test('an edited search profile restores query, custom URLs and filters', async () => {
+  const app = harness(); await app.run('initialSync');
+  const profile = {format:'lootsniper-search',version:1,name:'Telefono ricondizionato',query:'iPhone 15 256GB',
+    marketplaces:{vinted:true,ebay:'https://www.ebay.it/sch/i.html?_nkw=iphone+15&_udhi=700',subito:false},
+    filters:{maxPrice:700,minMargin:null,platform:'EBAY',order:'price-asc',text:'256GB'},deepScan:false};
+  await app.run(`importSearchProfile({target:{files:[{size:1000,text:async()=>${JSON.stringify(JSON.stringify(profile))}}],value:'profile'}})`);
+  assert.equal(app.run('savedSearches[0].name'), 'Telefono ricondizionato');
+  assert.equal(app.elements.get('market-query').value, 'iPhone 15 256GB');
+  assert.match(app.elements.get('link-vinted').value, /iPhone%2015%20256GB/);
+  assert.match(app.elements.get('link-ebay').value, /_udhi=700/);
+  assert.equal(app.elements.get('link-subito').value, '');
+  assert.equal(app.elements.get('max-price').value, '700');
+  assert.equal(app.elements.get('platform-filter').value, 'EBAY');
+  assert.equal(app.elements.get('deep-scan').checked, false);
 });
 test('legacy result-array backups merge duplicates and reject unsupported versions', async () => {
   const app = harness(); await app.run('initialSync');
