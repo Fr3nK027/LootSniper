@@ -215,7 +215,9 @@ Per conservare annunci o preferiti oltre la sessione, usa **Esporta backup** pri
 2. Scrivi **S** quando viene richiesta la conferma.
 3. Attendi il messaggio **LootSniper è stato disinstallato completamente**.
 
-Il disinstallatore arresta l’app e rimuove il programma, il runtime Python privato, i collegamenti, ricerche, importazioni, log e configurazione Discord. I backup che hai esportato in Download o in altre cartelle rimangono disponibili. La cartella ZIP estratta manualmente da GitHub non fa parte dell’installazione: puoi eliminarla normalmente dopo la disinstallazione.
+Il disinstallatore prova prima l’arresto normale, poi chiude automaticamente gli eventuali processi Python, PowerShell, CMD o WScript avviati dalla cartella di LootSniper. Rimuove programma, runtime Python privato, ricerche, importazioni, log e configurazione Discord. Cerca inoltre i collegamenti sia nel Desktop standard sia nei Desktop spostati in OneDrive, li elimina dal menu Start e aggiorna Esplora file per far sparire subito l’icona.
+
+I backup che hai esportato in Download o in altre cartelle rimangono disponibili. La cartella ZIP estratta manualmente da GitHub non fa parte dell’installazione: puoi eliminarla normalmente dopo la disinstallazione.
 
 ## Risoluzione dei problemi
 
@@ -223,6 +225,7 @@ Il disinstallatore arresta l’app e rimuove il programma, il runtime Python pri
 | --- | --- |
 | Il download automatico non parte | Controlla la connessione e che `python.org` non sia bloccato da firewall o proxy; poi riavvia `Installa LootSniper.cmd`. |
 | L’installer segnala che LootSniper è aperto | Premi **Arresta LootSniper** nella dashboard e riprova. |
+| Dopo la disinstallazione resta l’icona sul Desktop | Usa il disinstallatore 6.6 o successivo: controlla anche OneDrive e forza l’aggiornamento del Desktop. |
 | Windows mostra un avviso | Verifica di aver scaricato dal repository ufficiale, poi usa **Ulteriori informazioni → Esegui comunque**. |
 | Python non trovato nella modalità portatile | Installa Python 3.10+ e verifica `py -3 --version`, oppure usa l’installer automatico. |
 | L’avvio nascosto segnala un errore | Leggi `radar-avvio.log` e `radar-server.log` nella cartella del progetto. |

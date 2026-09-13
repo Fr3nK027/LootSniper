@@ -22,11 +22,16 @@ class UninstallerTests(unittest.TestCase):
                 shutil.copyfile(root / name, install / name)
         return install
 
-    def run_uninstaller(self, script, install, parent):
-        return subprocess.run([
+    def run_uninstaller(self, script, install, parent, no_shortcuts=True, shortcut_roots=None):
+        command = [
             "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script),
-            "-InstallDir", str(install), "-Yes", "-NoShortcuts"
-        ], cwd=Path(parent), capture_output=True, text=True, timeout=30)
+            "-InstallDir", str(install), "-Yes"
+        ]
+        if no_shortcuts:
+            command.append("-NoShortcuts")
+        if shortcut_roots:
+            command.extend(["-ShortcutRoots", *map(str, shortcut_roots)])
+        return subprocess.run(command, cwd=Path(parent), capture_output=True, text=True, timeout=30)
 
     def test_complete_uninstall_removes_only_the_marked_installation(self):
         with tempfile.TemporaryDirectory(prefix="lootsniper uninstall test ") as parent:
@@ -42,6 +47,42 @@ class UninstallerTests(unittest.TestCase):
             install = self.make_install(parent, include_uninstaller=False)
             result = self.run_uninstaller(root / "disinstalla.ps1", install, parent)
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertFalse(install.exists())
+
+    def test_uninstaller_closes_processes_started_from_the_installation(self):
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory(prefix="lootsniper running uninstall test ") as parent:
+            install = self.make_install(parent, include_uninstaller=False)
+            sleeper = install / "python.exe"
+            shutil.copyfile(Path(os.environ["WINDIR"]) / "System32" / "ping.exe", sleeper)
+            process = subprocess.Popen(
+                [str(sleeper), "-n", "60", "127.0.0.1"],
+                cwd=install, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            try:
+                result = self.run_uninstaller(root / "disinstalla.ps1", install, parent)
+                self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                process.wait(timeout=5)
+                self.assertFalse(install.exists())
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait()
+
+    def test_uninstaller_removes_desktop_and_start_shortcuts_from_supplied_roots(self):
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory(prefix="lootsniper shortcut uninstall test ") as parent:
+            install = self.make_install(parent, include_uninstaller=False)
+            one_drive_desktop = Path(parent) / "OneDrive" / "Desktop"
+            one_drive_desktop.mkdir(parents=True)
+            shortcuts = [one_drive_desktop / "LootSniper.lnk", one_drive_desktop / "Disinstalla LootSniper.lnk"]
+            for shortcut in shortcuts:
+                shortcut.write_text("stale shortcut", encoding="utf-8")
+            result = self.run_uninstaller(root / "disinstalla.ps1", install, parent,
+                                          no_shortcuts=False, shortcut_roots=[one_drive_desktop])
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            self.assertTrue(all(not shortcut.exists() for shortcut in shortcuts))
             self.assertFalse(install.exists())
 
 

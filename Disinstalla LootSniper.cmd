@@ -9,5 +9,5 @@ if errorlevel 1 (
     exit /b 1
 )
 echo.
-pause
+timeout /t 2 /nobreak >nul
 exit /b 0
