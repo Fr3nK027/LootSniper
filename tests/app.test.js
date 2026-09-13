@@ -118,6 +118,20 @@ test('catalog view defaults to list and remembers the optional grid choice', asy
   const defaultApp = harness(); await defaultApp.run('initialSync');
   assert.equal(defaultApp.elements.get('results-grid').dataset.view, 'list');
 });
+test('active catalog filters are visible and can be removed independently', async () => {
+  const app = harness(); await app.run('initialSync');
+  app.elements.get('search-input').value = 'synology';
+  app.elements.get('platform-filter').value = 'EBAY';
+  app.elements.get('max-price').value = '500';
+  app.run('renderAllCards()');
+  assert.equal(app.elements.get('active-filters').hidden, false);
+  assert.match(app.elements.get('active-filters').innerHTML, /Testo: “synology”/);
+  assert.match(app.elements.get('active-filters').innerHTML, /Marketplace: eBay/);
+  assert.equal(app.run("clearActiveFilter('platform-filter')"), true);
+  assert.equal(app.elements.get('platform-filter').value, '');
+  assert.equal(app.elements.get('search-input').value, 'synology');
+  assert.equal(app.run("clearActiveFilter('unknown')"), false);
+});
 test('price history records changes and survives backup normalization', async () => {
   const app = harness(); await app.run('initialSync');
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/123',title:'Laptop RTX 4070',price:900,updatedAt:Date.now()-2000})");

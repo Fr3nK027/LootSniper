@@ -1,4 +1,4 @@
-/* LootSniper 6.7 — day/night catalog experience. */
+/* LootSniper 6.8 — accessible day/night catalog experience. */
 :root,
 :root[data-theme="light"] {
   --bg: #f5f7f8;
@@ -243,6 +243,12 @@ h1 span { color: var(--accent); }
 .filter-extras { color: var(--muted); gap: 9px; padding: 3px 0 14px; }
 .filter-chip { min-height: 38px; padding: 4px 9px 4px 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; }
 .filter-extras input[type="number"] { width: 88px; min-height: 34px; padding: 7px 9px; font-size: 11px; }
+.active-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin: -3px 0 15px; }
+.active-filters[hidden] { display: none; }
+.active-filters > span { margin-right: 2px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .045em; text-transform: uppercase; }
+.active-filters button { min-height: 30px; padding: 5px 9px; color: var(--accent); background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line)); border-radius: 999px; font-size: 10px; font-weight: 650; }
+.active-filters button:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface)); }
+.active-filters b { margin-left: 4px; font-size: 13px; line-height: 1; }
 .catalog-note { margin: 0 0 18px; padding: 11px 14px; background: color-mix(in srgb, var(--accent-soft) 54%, transparent); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; }
 .catalog-note strong { color: var(--text); }
 .view-switch { display: inline-flex; gap: 3px; margin-left: auto; padding: 3px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; }

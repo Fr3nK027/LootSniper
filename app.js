@@ -350,6 +350,27 @@ function applyResultView(view = resultView) {
   $('btn-view-grid').setAttribute('aria-pressed', String(resultView === 'grid'));
   persist('radar-result-view', resultView);
 }
+function renderActiveFilters() {
+  const entries = [];
+  const resultQuery = $('search-input').value.trim();
+  const platform = $('platform-filter').value;
+  if (resultQuery) entries.push(['search-input', 'Testo: “' + resultQuery.slice(0, 60) + '”']);
+  if (platform) entries.push(['platform-filter', 'Marketplace: ' + (platform === 'EBAY' ? 'eBay' : platform[0] + platform.slice(1).toLowerCase())]);
+  if ($('max-price').value !== '') entries.push(['max-price', 'Fino a ' + $('max-price').value + ' €']);
+  if ($('min-margin').value !== '') entries.push(['min-margin', 'Risparmio da ' + $('min-margin').value + ' €']);
+  if ($('favorites-only').checked) entries.push(['favorites-only', 'Solo preferiti']);
+  $('active-filters').hidden = !entries.length;
+  $('active-filters').innerHTML = entries.length ? '<span>Filtri attivi</span>' + entries.map(([id, label]) =>
+    '<button type="button" data-clear-filter="' + id + '" aria-label="Rimuovi filtro ' + escapeHtml(label) + '">' + escapeHtml(label) + ' <b aria-hidden="true">×</b></button>').join('') : '';
+}
+function clearActiveFilter(id) {
+  if (!['search-input', 'platform-filter', 'max-price', 'min-margin', 'favorites-only'].includes(id)) return false;
+  if (id === 'favorites-only') $(id).checked = false; else $(id).value = '';
+  renderedLimit = 60; persistFilters(); renderAllCards();
+  const nextFilter = $('active-filters').querySelector?.('button');
+  (nextFilter || $('results-count')).focus({ preventScroll: true });
+  return true;
+}
 function renderAllCards() {
   const focusedUrl = document.activeElement?.dataset?.url;
   const items = filteredItems();
@@ -363,6 +384,7 @@ function renderAllCards() {
   $('count-scanned').textContent = totalAnalyzed;
   $('count-favorites').textContent = bombsArray.filter(item => favorites.has(item.url)).length;
   $('results-count').textContent = items.length + ' risultati' + (items.length > renderedLimit ? ' · primi ' + renderedLimit + ' mostrati' : '');
+  renderActiveFilters();
   const marketQuery = $('market-query').value.trim();
   $('results-title').textContent = marketQuery ? 'Risultati per “' + marketQuery.slice(0, 80) + '”' : bombsArray.length ? 'Annunci nel radar' : 'Trova il tuo prossimo acquisto';
   $('btn-more').hidden = items.length <= renderedLimit;
@@ -397,7 +419,7 @@ function cardTemplate(item) {
     '<li>Venditore, spedizione e commissioni.</li></ul></details></div>';
   const preview = item.image ? '<img src="' + escapeHtml(item.image) + '" alt="' + escapeHtml(item.titolo) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span class="image-placeholder" aria-hidden="true">▧</span><span>Nessuna immagine</span>';
   const details = item.details ? escapeHtml(item.details.slice(0, 280)) : 'Specifiche non riportate: controlla la descrizione originale.';
-  return '<article class="card"><div class="card-image' + (item.image ? '' : ' card-image-empty') + '">' + preview + '<button class="favorite" data-action="favorite" data-url="' +
+  return '<article class="card" aria-label="' + escapeHtml(item.titolo + ' · ' + item.platform + ' · ' + euros.format(item.prezzo)) + '"><div class="card-image' + (item.image ? '' : ' card-image-empty') + '">' + preview + '<button class="favorite" data-action="favorite" data-url="' +
     escapeHtml(item.url) + '" aria-pressed="' + saved + '" aria-label="' + (saved ? 'Rimuovi dai preferiti' : 'Salva preferito') + '">' +
     (saved ? '★' : '☆') + '</button></div><div class="card-head card-info"><div class="listing-kicker"><span class="platform ' + item.platform.toLowerCase() + '">' + item.platform +
     '</span><span>' + (generic ? 'Prodotto da confrontare' : 'Occasione rilevata') + '</span></div><h2 class="card-title">' + escapeHtml(item.titolo) + '</h2><p class="listing-details">' + details + '</p><div class="tags">' +
@@ -700,6 +722,10 @@ FILTER_IDS.forEach(id => {
 $('btn-reset-filters').addEventListener('click', () => {
   ['search-input', 'platform-filter', 'max-price', 'min-margin'].forEach(id => { $(id).value = ''; });
   $('favorites-only').checked = false; persistFilters(); renderAllCards();
+});
+$('active-filters').addEventListener('click', event => {
+  const button = event.target?.closest?.('[data-clear-filter]');
+  if (button) clearActiveFilter(button.dataset.clearFilter);
 });
 $('btn-more').addEventListener('click', () => { renderedLimit += 60; renderAllCards(); });
 $('btn-view-list').addEventListener('click', () => applyResultView('list'));

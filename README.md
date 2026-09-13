@@ -105,6 +105,7 @@ L’elenco interno è condiviso con l’estensione soltanto durante la sessione 
 - Premi **Griglia** per una vista più compatta; LootSniper ricorda la vista scelta sul PC.
 - Cerca un modello o una caratteristica nei risultati.
 - Filtra per marketplace, budget massimo e differenza minima.
+- I filtri applicati compaiono sopra gli annunci: premi **×** su un singolo filtro per rimuoverlo senza perdere gli altri.
 - Premi la **stella** sulla scheda per salvarla nei preferiti.
 - Usa **Solo preferiti** per restringere l’archivio.
 - Scegli l’ordinamento; **Mostra altri 60 annunci** carica le schede successive.
