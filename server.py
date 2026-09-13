@@ -26,7 +26,7 @@ ALLOWED_HOSTS = {host for domain in PLATFORMS.values() for host in (domain, "www
 STATIC_FILES = {"radar usato 3 market.html", "app.js", "styles.css", "radar-core.js", "radar-runtime.js", "browser-bridge/listings.js", "experience.css", "radar-guide.js", "theme.js", "assets/lootsniper.svg", "assets/lootsniper.ico"}
 WORKSPACE_ID = hashlib.sha256(str(ROOT).casefold().encode()).hexdigest()[:16]
 PORT = 8765
-VERSION = "7.5"
+VERSION = "7.6"
 CATEGORY_FILTERS = {"", "gaming", "component", "nas", "network", "server", "smartphone", "other"}
 MAX_BODY = 2 * 1024 * 1024
 MAX_HTML = 10 * 1024 * 1024
@@ -138,8 +138,11 @@ def clean_searches(searches):
         deep_scan = item.get("deepScan", True)
         if not isinstance(deep_scan, bool):
             raise ValueError("Impostazione scansione non valida")
+        with_photo_only = item.get("withPhotoOnly", False)
+        if not isinstance(with_photo_only, bool):
+            raise ValueError("Filtro foto non valido")
         entry.update({"platformFilter": platform_filter, "categoryFilter": category_filter, "sortOrder": sort_order,
-                      "resultQuery": result_query, "deepScan": deep_scan})
+                      "resultQuery": result_query, "deepScan": deep_scan, "withPhotoOnly": with_photo_only})
         clean.append(entry)
         names.add(name.casefold())
     return clean

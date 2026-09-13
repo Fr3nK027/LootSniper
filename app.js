@@ -44,7 +44,8 @@ let renderedLimit = 60;
 let quickQueryDirty = false;
 let resultView = readStorage('radar-result-view', 'list') === 'grid' ? 'grid' : 'list';
 const manualPlatforms = new Set();
-const FILTER_IDS = ['search-input', 'platform-filter', 'category-filter', 'sort-order', 'min-price', 'max-price', 'min-margin', 'favorites-only'];
+const FILTER_IDS = ['search-input', 'platform-filter', 'category-filter', 'sort-order', 'min-price', 'max-price', 'min-margin', 'with-photo-only', 'favorites-only'];
+const CHECKBOX_FILTERS = new Set(['with-photo-only', 'favorites-only']);
 const SESSION_KEY = 'radar-session';
 const SEARCH_PROFILE_FORMAT = 'lootsniper-search';
 const SEARCH_PROFILE_VERSION = 1;
@@ -74,7 +75,7 @@ async function initializeSession() {
   if (readStorage(SESSION_KEY, '') !== status.session) resetBrowserSession(status.session);
 }
 function persistFilters() {
-  const values = Object.fromEntries(FILTER_IDS.map(id => [id, id === 'favorites-only' ? $(id).checked : $(id).value]));
+  const values = Object.fromEntries(FILTER_IDS.map(id => [id, CHECKBOX_FILTERS.has(id) ? $(id).checked : $(id).value]));
   persist('radar-filters', values);
 }
 function restoreFilters() {
@@ -85,6 +86,7 @@ function restoreFilters() {
   $('category-filter').value = Object.hasOwn(CATEGORY_LABELS, values['category-filter']) ? values['category-filter'] : '';
   $('sort-order').value = SORT_ORDERS.includes(values['sort-order']) ? values['sort-order'] : 'margin-desc';
   ['min-price', 'max-price', 'min-margin'].forEach(id => { $(id).value = values[id] !== '' && Number.isFinite(Number(values[id])) && Number(values[id]) >= 0 ? String(values[id]) : ''; });
+  $('with-photo-only').checked = values['with-photo-only'] === true;
   $('favorites-only').checked = values['favorites-only'] === true;
 }
 
@@ -169,6 +171,7 @@ function loadSavedSearch(search) {
   $('platform-filter').value = Object.hasOwn(MARKET_HOSTS, search.platformFilter) ? search.platformFilter : '';
   $('category-filter').value = Object.hasOwn(CATEGORY_LABELS, search.categoryFilter) ? search.categoryFilter : '';
   $('sort-order').value = SORT_ORDERS.includes(search.sortOrder) ? search.sortOrder : 'margin-desc';
+  $('with-photo-only').checked = search.withPhotoOnly === true;
   $('favorites-only').checked = false;
   $('deep-scan').checked = search.deepScan !== false;
   quickQueryDirty = false; manualPlatforms.clear();
@@ -247,6 +250,7 @@ function searchProfile(entry) {
       minMargin: entry.minMargin ?? null,
       platform: entry.platformFilter || '',
       category: entry.categoryFilter || '',
+      withPhoto: entry.withPhotoOnly === true,
       order: entry.sortOrder || 'margin-desc',
       text: entry.resultQuery || ''
     },
@@ -288,6 +292,8 @@ function parseSearchProfile(data) {
   if (entry.platformFilter !== '' && !Object.hasOwn(MARKET_HOSTS, entry.platformFilter)) throw new Error('Filtro marketplace non valido.');
   entry.categoryFilter = filters.category ?? '';
   if (entry.categoryFilter !== '' && !Object.hasOwn(CATEGORY_LABELS, entry.categoryFilter)) throw new Error('Filtro categoria non valido.');
+  if (filters.withPhoto !== undefined && typeof filters.withPhoto !== 'boolean') throw new Error('Filtro foto non valido.');
+  entry.withPhotoOnly = filters.withPhoto === true;
   entry.sortOrder = filters.order ?? 'margin-desc';
   if (!SORT_ORDERS.includes(entry.sortOrder)) throw new Error('Ordinamento non valido.');
   entry.resultQuery = filters.text ?? '';
@@ -330,6 +336,7 @@ async function saveSearch() {
       maxPrice: optionalProfileNumber($('max-price').value, 'Il budget massimo'),
       minMargin: optionalProfileNumber($('min-margin').value, 'La differenza minima'), platformFilter: $('platform-filter').value,
       categoryFilter: $('category-filter').value,
+      withPhotoOnly: $('with-photo-only').checked,
       sortOrder: SORT_ORDERS.includes($('sort-order').value) ? $('sort-order').value : 'margin-desc',
       resultQuery: $('search-input').value.slice(0, 500), deepScan: $('deep-scan').checked, updatedAt: new Date().toISOString() };
   } catch (error) { logMsg(error.message, 'log-warn'); return; }
@@ -372,6 +379,7 @@ function filteredItems() {
   const minMargin = $('min-margin').value === '' ? -Infinity : Number($('min-margin').value);
   const items = bombsArray.filter(item => (!$('platform-filter').value || item.platform === $('platform-filter').value)
     && (!$('category-filter').value || resultCategory(item) === $('category-filter').value)
+    && (!$('with-photo-only').checked || Boolean(item.image))
     && (!$('favorites-only').checked || favorites.has(item.url))
     && item.prezzo >= minPrice && item.prezzo <= maxPrice && item.evalData.margine >= minMargin
     && normalizeListingText(item.titolo + ' ' + item.evalData.gpuName + ' ' + item.details).includes(query));
@@ -399,14 +407,15 @@ function renderActiveFilters() {
   if ($('min-price').value !== '') entries.push(['min-price', 'Da ' + $('min-price').value + ' €']);
   if ($('max-price').value !== '') entries.push(['max-price', 'Fino a ' + $('max-price').value + ' €']);
   if ($('min-margin').value !== '') entries.push(['min-margin', 'Risparmio da ' + $('min-margin').value + ' €']);
+  if ($('with-photo-only').checked) entries.push(['with-photo-only', 'Solo con foto']);
   if ($('favorites-only').checked) entries.push(['favorites-only', 'Solo preferiti']);
   $('active-filters').hidden = !entries.length;
   $('active-filters').innerHTML = entries.length ? '<span>Filtri attivi</span>' + entries.map(([id, label]) =>
     '<button type="button" data-clear-filter="' + id + '" aria-label="Rimuovi filtro ' + escapeHtml(label) + '">' + escapeHtml(label) + ' <b aria-hidden="true">×</b></button>').join('') : '';
 }
 function clearActiveFilter(id) {
-  if (!['search-input', 'platform-filter', 'category-filter', 'min-price', 'max-price', 'min-margin', 'favorites-only'].includes(id)) return false;
-  if (id === 'favorites-only') $(id).checked = false; else $(id).value = '';
+  if (!['search-input', 'platform-filter', 'category-filter', 'min-price', 'max-price', 'min-margin', 'with-photo-only', 'favorites-only'].includes(id)) return false;
+  if (CHECKBOX_FILTERS.has(id)) $(id).checked = false; else $(id).value = '';
   renderedLimit = 60; persistFilters(); renderAllCards();
   const nextFilter = $('active-filters').querySelector?.('button');
   (nextFilter || $('results-count')).focus({ preventScroll: true });
@@ -769,7 +778,7 @@ FILTER_IDS.forEach(id => {
 });
 $('btn-reset-filters').addEventListener('click', () => {
   ['search-input', 'platform-filter', 'category-filter', 'min-price', 'max-price', 'min-margin'].forEach(id => { $(id).value = ''; });
-  $('favorites-only').checked = false; persistFilters(); renderAllCards();
+  CHECKBOX_FILTERS.forEach(id => { $(id).checked = false; }); persistFilters(); renderAllCards();
 });
 $('active-filters').addEventListener('click', event => {
   const button = event.target?.closest?.('[data-clear-filter]');

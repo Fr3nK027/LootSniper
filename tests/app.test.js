@@ -125,12 +125,13 @@ test('favorites migrate from tracked URLs to their canonical listing identity', 
   assert.equal(app.run("favorites.has('https://www.ebay.it/itm/123')"), true);
 });
 test('saved filters restore only valid values and do not become arbitrary HTML', async () => {
-  const app = harness({storage:{'radar-filters':JSON.stringify({'min-price':'200','max-price':'800','platform-filter':'EBAY','category-filter':'nas','favorites-only':true,'sort-order':'not-a-sort'})}});
+  const app = harness({storage:{'radar-filters':JSON.stringify({'min-price':'200','max-price':'800','platform-filter':'EBAY','category-filter':'nas','with-photo-only':true,'favorites-only':true,'sort-order':'not-a-sort'})}});
   await app.run('initialSync');
   assert.equal(app.elements.get('min-price').value, '200');
   assert.equal(app.elements.get('max-price').value, '800');
   assert.equal(app.elements.get('platform-filter').value, 'EBAY');
   assert.equal(app.elements.get('category-filter').value, 'nas');
+  assert.equal(app.elements.get('with-photo-only').checked, true);
   assert.equal(app.elements.get('favorites-only').checked, true);
   assert.equal(app.elements.get('sort-order').value, 'margin-desc');
 });
@@ -186,6 +187,19 @@ test('catalog price range applies both minimum and maximum limits', async () => 
   app.run('renderActiveFilters()');
   assert.match(app.elements.get('active-filters').innerHTML, /Da 200 €/);
   assert.match(app.elements.get('active-filters').innerHTML, /Fino a 500 €/);
+});
+test('photo filter keeps only listings with an image and exposes a removable chip', async () => {
+  const app = harness(); await app.run('initialSync');
+  app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/1',title:'NAS Synology 2 bay',price:150,image:'https://images.example/nas.jpg',updatedAt:Date.now()})");
+  app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/2',title:'NAS QNAP 4 bay',price:350,updatedAt:Date.now()})");
+  app.elements.get('with-photo-only').checked = true;
+  assert.equal(app.run('filteredItems().length'), 1);
+  assert.match(app.run('filteredItems()[0].image'), /^https:/);
+  app.run('renderActiveFilters()');
+  assert.match(app.elements.get('active-filters').innerHTML, /Solo con foto/);
+  assert.equal(app.run("clearActiveFilter('with-photo-only')"), true);
+  assert.equal(app.elements.get('with-photo-only').checked, false);
+  assert.equal(app.run('filteredItems().length'), 2);
 });
 test('catalog view defaults to list and remembers the optional grid choice', async () => {
   const gridApp = harness({storage:{'radar-result-view':JSON.stringify('grid')}}); await gridApp.run('initialSync');
@@ -245,6 +259,7 @@ test('saving a generic electronics search downloads a reusable editable profile'
   app.elements.get('min-price').value = '150';
   app.elements.get('max-price').value = '450';
   app.elements.get('category-filter').value = 'nas';
+  app.elements.get('with-photo-only').checked = true;
   app.elements.get('sort-order').value = 'price-asc';
   app.run("$('deep-scan').checked = true; quickQueryDirty = true");
   await app.run('saveSearch()');
@@ -257,13 +272,14 @@ test('saving a generic electronics search downloads a reusable editable profile'
   assert.equal(profile.filters.minPrice, 150);
   assert.equal(profile.filters.maxPrice, 450);
   assert.equal(profile.filters.category, 'nas');
+  assert.equal(profile.filters.withPhoto, true);
   assert.equal(profile.filters.order, 'price-asc');
 });
 test('an edited search profile restores query, custom URLs and filters', async () => {
   const app = harness(); await app.run('initialSync');
   const profile = {format:'lootsniper-search',version:1,name:'Telefono ricondizionato',query:'iPhone 15 256GB',
     marketplaces:{vinted:true,ebay:'https://www.ebay.it/sch/i.html?_nkw=iphone+15&_udhi=700',subito:false},
-    filters:{minPrice:300,maxPrice:700,minMargin:null,platform:'EBAY',category:'smartphone',order:'price-asc',text:'256GB'},deepScan:false};
+    filters:{minPrice:300,maxPrice:700,minMargin:null,platform:'EBAY',category:'smartphone',withPhoto:true,order:'price-asc',text:'256GB'},deepScan:false};
   await app.run(`importSearchProfile({target:{files:[{size:1000,text:async()=>${JSON.stringify(JSON.stringify(profile))}}],value:'profile'}})`);
   assert.equal(app.run('savedSearches[0].name'), 'Telefono ricondizionato');
   assert.equal(app.elements.get('market-query').value, 'iPhone 15 256GB');
@@ -274,6 +290,7 @@ test('an edited search profile restores query, custom URLs and filters', async (
   assert.equal(app.elements.get('max-price').value, '700');
   assert.equal(app.elements.get('platform-filter').value, 'EBAY');
   assert.equal(app.elements.get('category-filter').value, 'smartphone');
+  assert.equal(app.elements.get('with-photo-only').checked, true);
   assert.equal(app.elements.get('deep-scan').checked, false);
 });
 test('legacy result-array backups merge duplicates and reject unsupported versions', async () => {
