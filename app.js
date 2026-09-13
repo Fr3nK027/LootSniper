@@ -44,7 +44,7 @@ let renderedLimit = 60;
 let quickQueryDirty = false;
 let resultView = readStorage('radar-result-view', 'list') === 'grid' ? 'grid' : 'list';
 const manualPlatforms = new Set();
-const FILTER_IDS = ['search-input', 'platform-filter', 'category-filter', 'sort-order', 'max-price', 'min-margin', 'favorites-only'];
+const FILTER_IDS = ['search-input', 'platform-filter', 'category-filter', 'sort-order', 'min-price', 'max-price', 'min-margin', 'favorites-only'];
 const SESSION_KEY = 'radar-session';
 const SEARCH_PROFILE_FORMAT = 'lootsniper-search';
 const SEARCH_PROFILE_VERSION = 1;
@@ -83,7 +83,7 @@ function restoreFilters() {
   $('platform-filter').value = Object.hasOwn(MARKET_HOSTS, values['platform-filter']) ? values['platform-filter'] : '';
   $('category-filter').value = Object.hasOwn(CATEGORY_LABELS, values['category-filter']) ? values['category-filter'] : '';
   $('sort-order').value = SORT_ORDERS.includes(values['sort-order']) ? values['sort-order'] : 'margin-desc';
-  ['max-price', 'min-margin'].forEach(id => { $(id).value = values[id] !== '' && Number.isFinite(Number(values[id])) && Number(values[id]) >= 0 ? String(values[id]) : ''; });
+  ['min-price', 'max-price', 'min-margin'].forEach(id => { $(id).value = values[id] !== '' && Number.isFinite(Number(values[id])) && Number(values[id]) >= 0 ? String(values[id]) : ''; });
   $('favorites-only').checked = values['favorites-only'] === true;
 }
 
@@ -162,6 +162,7 @@ function loadSavedSearch(search) {
   $('market-query').value = typeof search.query === 'string' ? search.query : '';
   $('search-name').value = search.name;
   $('search-input').value = typeof search.resultQuery === 'string' ? search.resultQuery : '';
+  $('min-price').value = search.minPrice === null || search.minPrice === undefined ? '' : String(search.minPrice);
   $('max-price').value = search.maxPrice === null || search.maxPrice === undefined ? '' : String(search.maxPrice);
   $('min-margin').value = search.minMargin === null || search.minMargin === undefined ? '' : String(search.minMargin);
   $('platform-filter').value = Object.hasOwn(MARKET_HOSTS, search.platformFilter) ? search.platformFilter : '';
@@ -240,6 +241,7 @@ function searchProfile(entry) {
     query: entry.query || '',
     marketplaces,
     filters: {
+      minPrice: entry.minPrice ?? null,
       maxPrice: entry.maxPrice ?? null,
       minMargin: entry.minMargin ?? null,
       platform: entry.platformFilter || '',
@@ -278,6 +280,7 @@ function parseSearchProfile(data) {
   if (!Object.keys(MARKET_HOSTS).some(platform => entry[platform.toLowerCase()])) throw new Error('Attiva almeno un marketplace.');
   const filters = data.filters === undefined ? {} : data.filters;
   if (!filters || typeof filters !== 'object' || Array.isArray(filters)) throw new Error('Sezione filtri non valida.');
+  entry.minPrice = optionalProfileNumber(filters.minPrice, 'Il prezzo minimo');
   entry.maxPrice = optionalProfileNumber(filters.maxPrice, 'Il budget massimo');
   entry.minMargin = optionalProfileNumber(filters.minMargin, 'La differenza minima');
   entry.platformFilter = filters.platform ?? '';
@@ -322,7 +325,8 @@ async function saveSearch() {
   let entry;
   try {
     entry = { name, query: $('market-query').value.trim().slice(0, 200), vinted: '', ebay: '', subito: '',
-      customPlatforms: [...manualPlatforms], maxPrice: optionalProfileNumber($('max-price').value, 'Il budget massimo'),
+      customPlatforms: [...manualPlatforms], minPrice: optionalProfileNumber($('min-price').value, 'Il prezzo minimo'),
+      maxPrice: optionalProfileNumber($('max-price').value, 'Il budget massimo'),
       minMargin: optionalProfileNumber($('min-margin').value, 'La differenza minima'), platformFilter: $('platform-filter').value,
       categoryFilter: $('category-filter').value,
       sortOrder: SORT_ORDERS.includes($('sort-order').value) ? $('sort-order').value : 'margin-desc',
@@ -352,12 +356,13 @@ function updateCategoryFilterCounts() {
 }
 function filteredItems() {
   const query = normalizeListingText($('search-input').value);
+  const minPrice = Number($('min-price').value) || 0;
   const maxPrice = Number($('max-price').value) || Infinity;
   const minMargin = $('min-margin').value === '' ? -Infinity : Number($('min-margin').value);
   const items = bombsArray.filter(item => (!$('platform-filter').value || item.platform === $('platform-filter').value)
     && (!$('category-filter').value || resultCategory(item) === $('category-filter').value)
     && (!$('favorites-only').checked || favorites.has(item.url))
-    && item.prezzo <= maxPrice && item.evalData.margine >= minMargin
+    && item.prezzo >= minPrice && item.prezzo <= maxPrice && item.evalData.margine >= minMargin
     && normalizeListingText(item.titolo + ' ' + item.evalData.gpuName + ' ' + item.details).includes(query));
   const sort = $('sort-order').value;
   items.sort((a, b) => sort === 'price-asc' ? a.prezzo - b.prezzo : sort === 'price-desc' ? b.prezzo - a.prezzo
@@ -380,6 +385,7 @@ function renderActiveFilters() {
   if (resultQuery) entries.push(['search-input', 'Testo: “' + resultQuery.slice(0, 60) + '”']);
   if (platform) entries.push(['platform-filter', 'Marketplace: ' + (platform === 'EBAY' ? 'eBay' : platform[0] + platform.slice(1).toLowerCase())]);
   if (category) entries.push(['category-filter', 'Categoria: ' + CATEGORY_LABELS[category]]);
+  if ($('min-price').value !== '') entries.push(['min-price', 'Da ' + $('min-price').value + ' €']);
   if ($('max-price').value !== '') entries.push(['max-price', 'Fino a ' + $('max-price').value + ' €']);
   if ($('min-margin').value !== '') entries.push(['min-margin', 'Risparmio da ' + $('min-margin').value + ' €']);
   if ($('favorites-only').checked) entries.push(['favorites-only', 'Solo preferiti']);
@@ -388,7 +394,7 @@ function renderActiveFilters() {
     '<button type="button" data-clear-filter="' + id + '" aria-label="Rimuovi filtro ' + escapeHtml(label) + '">' + escapeHtml(label) + ' <b aria-hidden="true">×</b></button>').join('') : '';
 }
 function clearActiveFilter(id) {
-  if (!['search-input', 'platform-filter', 'category-filter', 'max-price', 'min-margin', 'favorites-only'].includes(id)) return false;
+  if (!['search-input', 'platform-filter', 'category-filter', 'min-price', 'max-price', 'min-margin', 'favorites-only'].includes(id)) return false;
   if (id === 'favorites-only') $(id).checked = false; else $(id).value = '';
   renderedLimit = 60; persistFilters(); renderAllCards();
   const nextFilter = $('active-filters').querySelector?.('button');
@@ -750,7 +756,7 @@ FILTER_IDS.forEach(id => {
   $(id).addEventListener('input', () => { renderedLimit = 60; persistFilters(); renderAllCards(); });
 });
 $('btn-reset-filters').addEventListener('click', () => {
-  ['search-input', 'platform-filter', 'category-filter', 'max-price', 'min-margin'].forEach(id => { $(id).value = ''; });
+  ['search-input', 'platform-filter', 'category-filter', 'min-price', 'max-price', 'min-margin'].forEach(id => { $(id).value = ''; });
   $('favorites-only').checked = false; persistFilters(); renderAllCards();
 });
 $('active-filters').addEventListener('click', event => {

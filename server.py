@@ -26,7 +26,7 @@ ALLOWED_HOSTS = {host for domain in PLATFORMS.values() for host in (domain, "www
 STATIC_FILES = {"radar usato 3 market.html", "app.js", "styles.css", "radar-core.js", "radar-runtime.js", "browser-bridge/listings.js", "experience.css", "radar-guide.js", "theme.js", "assets/lootsniper.svg", "assets/lootsniper.ico"}
 WORKSPACE_ID = hashlib.sha256(str(ROOT).casefold().encode()).hexdigest()[:16]
 PORT = 8765
-VERSION = "7.3"
+VERSION = "7.4"
 CATEGORY_FILTERS = {"", "gaming", "component", "nas", "network", "server", "smartphone", "other"}
 MAX_BODY = 2 * 1024 * 1024
 MAX_HTML = 10 * 1024 * 1024
@@ -117,7 +117,7 @@ def clean_searches(searches):
             entry[platform.lower()] = value.strip()
         if not any(entry[key.lower()] for key in PLATFORMS):
             raise ValueError("Ogni ricerca deve contenere almeno un link")
-        for key in ("maxPrice", "minMargin"):
+        for key in ("minPrice", "maxPrice", "minMargin"):
             value = item.get(key)
             if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float))
                                       or not math.isfinite(value) or not 0 <= value <= 100000):
