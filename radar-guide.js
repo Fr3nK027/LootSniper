@@ -7,7 +7,7 @@
     $('guide-progress').textContent = `Passaggio ${step + 1} di 3`;
     $('guide-back').hidden = step === 0;
     $('guide-next').textContent = step === 2 ? 'Prepara la mia ricerca' : 'Continua';
-    $('guide-title').textContent = ['Benvenuto in LootSniper', 'Trova il tuo prossimo portatile', 'Sei pronto a cercare'][step];
+    $('guide-title').textContent = ['Benvenuto in LootSniper', 'Trova quello che cerchi', 'Sei pronto a cercare'][step];
     $('guide-title').focus();
   };
   const openGuide = () => {
@@ -27,7 +27,7 @@
     $('btn-generate-links').click();
     $('max-price').value = $('guide-budget').value;
     persistFilters(); renderAllCards(); guide.close(); $('btn-scan').focus();
-    setScanState('Ricerca pronta', 'Premi Esegui ricerca. Puoi salvarla con un nome per ritrovarla al prossimo avvio.');
+    setScanState('Ricerca pronta', 'Premi Esegui ricerca. Puoi salvarla con un nome per riutilizzarla durante questa sessione.');
   });
   $('btn-settings').addEventListener('click', () => settings.showModal());
   $('btn-close-settings').addEventListener('click', () => settings.close());

@@ -60,7 +60,9 @@ class RadarApiTests(unittest.TestCase):
                 "url": "https://www.ebay.it/itm/laptop/123456789?tracking=1", "details": "32 GB RAM"}]}
 
     def test_status_and_static_allowlist(self):
-        self.assertEqual(self.request("/api/status")[0], 200)
+        code, status, _ = self.request("/api/status")
+        self.assertEqual(code, 200)
+        self.assertTrue(status["session"])
         self.assertEqual(self.request("/")[0], 200)
         self.assertEqual(self.request("/radar-core.js")[0], 200)
         for path in ("/server.py", "/radar-searches.json", "/.backups/baseline/app.js", "/%2e%2e/server.py"):
@@ -143,6 +145,17 @@ class RadarApiTests(unittest.TestCase):
 
 
 class UtilityTests(unittest.TestCase):
+    def test_new_run_resets_searches_and_imports(self):
+        with tempfile.TemporaryDirectory() as directory:
+            searches = Path(directory) / "searches.json"
+            imports = Path(directory) / "imports.json"
+            searches.write_text('[{"name":"old"}]', encoding="utf-8")
+            imports.write_text('[{"title":"old"}]', encoding="utf-8")
+            with patch.object(server, "SEARCHES_FILE", searches), patch.object(server, "IMPORTS_FILE", imports):
+                server.reset_session_data()
+            self.assertEqual(json.loads(searches.read_text(encoding="utf-8")), [])
+            self.assertEqual(json.loads(imports.read_text(encoding="utf-8")), [])
+
     def test_pagination(self):
         self.assertTrue(server.has_next_page('<a href="?q=laptop&amp;page=4">', "https://vinted.it/catalog?page=3"))
         self.assertTrue(server.has_next_page('?page=2 ', "https://vinted.it/catalog?page=broken"))

@@ -12,8 +12,8 @@ FIXTURES = [
      "details": "32 GB RAM 1 TB SSD", "url": "https://www.ebay.it/itm/123456789", "image": "", "updatedAt": 1789152000000},
     {"platform": "VINTED", "title": "Notebook RTX 4060 · esempio di test", "price": "550 EUR",
      "details": "16 GB RAM 512 GB SSD", "url": "https://www.vinted.it/items/987654321", "image": "", "updatedAt": 1789152000000},
-    {"platform": "SUBITO", "title": "MSI Raider RTX 4080 · esempio di test", "price": "1.100,00 €",
-     "details": "32 GB RAM 2 TB SSD", "url": "https://www.subito.it/informatica/laptop-123456.htm", "image": "", "updatedAt": 1789152000000}
+    {"platform": "SUBITO", "title": "NAS Synology DS224+ · esempio generico", "price": "280,00 €",
+     "details": "NAS 2 vani senza dischi", "url": "https://www.subito.it/informatica/nas-123456.htm", "image": "", "updatedAt": 1789152000000}
 ]
 class PreviewHandler(server.Handler):
     def serve_file(self, path):

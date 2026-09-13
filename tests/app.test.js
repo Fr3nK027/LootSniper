@@ -6,8 +6,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const coreSource = fs.readFileSync(path.join(__dirname, '../radar-core.js'), 'utf8');
 const appSource = fs.readFileSync(path.join(__dirname, '../app.js'), 'utf8');
-function harness({storage = {}, searches = [], revision = 'v1'} = {}) {
-  const memory = new Map(Object.entries(storage)), elements = new Map(), requests = [];
+function harness({storage = {}, searches = [], revision = 'v1', session = 'session-a', storedSession = session} = {}) {
+  const initialStorage = {...storage};
+  if (storedSession !== null && !Object.hasOwn(initialStorage, 'radar-session')) initialStorage['radar-session'] = JSON.stringify(storedSession);
+  const memory = new Map(Object.entries(initialStorage)), elements = new Map(), requests = [];
   function element() {
     return { value: '', checked: false, hidden: false, disabled: false, children: [], dataset: {},
       innerHTML: '', textContent: '', files: [], classList: {toggle(){}, add(){}, remove(){}},
@@ -23,7 +25,7 @@ function harness({storage = {}, searches = [], revision = 'v1'} = {}) {
     fetch: async (url, options={}) => {
       requests.push({url, options});
       const payload = options.method === 'POST' ? {revision:'v2',saved:1} :
-        url === '/api/searches' ? {searches,revision} : {items:[]};
+        url === '/api/status' ? {online:true,session} : url === '/api/searches' ? {searches,revision} : {items:[]};
       return {ok:true, json:async()=>payload};
     }
   });
@@ -32,6 +34,20 @@ function harness({storage = {}, searches = [], revision = 'v1'} = {}) {
 }
 const localSearch = {name:'Locale',ebay:'https://ebay.it/sch/i.html?_nkw=laptop'};
 const serverSearch = {name:'Server',vinted:'https://vinted.it/catalog?search_text=laptop'};
+test('a new server session clears the previous radar and searches', async () => {
+  const app = harness({storedSession:'old-session', session:'new-session', storage:{
+    'radar-results':JSON.stringify([{titolo:'Vecchio',prezzo:500,url:'https://ebay.it/itm/123',platform:'EBAY',evalData:{stima:900,tags:[]}}]),
+    'radar-favorites':JSON.stringify(['https://ebay.it/itm/123']), 'radar-searches':JSON.stringify([localSearch]),
+    'radar-filters':JSON.stringify({'max-price':'800'})
+  }});
+  await app.run('initialSync');
+  assert.equal(app.run('bombsArray.length'), 0);
+  assert.equal(app.run('favorites.size'), 0);
+  assert.equal(app.run('savedSearches.length'), 0);
+  assert.equal(app.memory.get('radar-session'), JSON.stringify('new-session'));
+  assert.deepEqual(JSON.parse(app.memory.get('radar-results')), []);
+  assert.equal(app.elements.get('max-price').value, '');
+});
 test('startup reads saved searches without overwriting existing server searches', async () => {
   const app = harness({storage:{'radar-searches':JSON.stringify([localSearch])}, searches:[serverSearch]});
   await app.run('initialSync');
@@ -61,6 +77,15 @@ test('imports update a saved listing even when its price is no longer a deal', a
   assert.equal(app.run('bombsArray.length'), 1);
   assert.equal(app.run('filteredItems().length'), 1);
 });
+test('generic technology such as NAS and routers remains visible for manual comparison', async () => {
+  const app = harness(); await app.run('initialSync');
+  assert.equal(app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/456',title:'NAS Synology DS224+ 2 bay',price:280,updatedAt:Date.now()})"), true);
+  assert.equal(app.run('bombsArray[0].evalData.kind'), 'generic');
+  assert.match(app.run('cardTemplate(bombsArray[0])'), /Valutazione manuale/);
+  assert.equal(app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/789',title:'Alimentatore per NAS Synology',price:30,updatedAt:Date.now()})"), false);
+  app.run('resetRadarResults()');
+  assert.equal(app.run('bombsArray.length'), 0);
+});
 test('old import snapshots cannot overwrite a more recent price', async () => {
   const app = harness(); await app.run('initialSync');
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/123',title:'Laptop RTX 4070',price:900,updatedAt:Date.now()})");
@@ -71,8 +96,9 @@ test('favorites migrate from tracked URLs to their canonical listing identity', 
   const app = harness({storage:{'radar-favorites':JSON.stringify(['https://ebay.it/itm/123?track=1'])}});
   assert.equal(app.run("favorites.has('https://www.ebay.it/itm/123')"), true);
 });
-test('saved filters restore only valid values and do not become arbitrary HTML', () => {
+test('saved filters restore only valid values and do not become arbitrary HTML', async () => {
   const app = harness({storage:{'radar-filters':JSON.stringify({'max-price':'800','platform-filter':'EBAY','favorites-only':true,'sort-order':'not-a-sort'})}});
+  await app.run('initialSync');
   assert.equal(app.elements.get('max-price').value, '800');
   assert.equal(app.elements.get('platform-filter').value, 'EBAY');
   assert.equal(app.elements.get('favorites-only').checked, true);

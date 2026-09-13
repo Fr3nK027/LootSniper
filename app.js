@@ -44,6 +44,29 @@ let renderedLimit = 60;
 let quickQueryDirty = false;
 const manualPlatforms = new Set();
 const FILTER_IDS = ['search-input', 'platform-filter', 'sort-order', 'max-price', 'min-margin', 'favorites-only'];
+const SESSION_KEY = 'radar-session';
+
+function resetBrowserSession(session) {
+  bombsArray = []; favorites = new Set(); savedSearches = []; selectedForVersus = [];
+  totalAnalyzed = 0; ignoredImports = {}; importVersions = new Map(); importCursor = 0;
+  undoArchive = null; renderedLimit = 60; quickQueryDirty = false; manualPlatforms.clear();
+  persist('radar-results', []); persist('radar-favorites', []); persist('radar-searches', []);
+  persist('radar-searches-local-backup', []); persist('radar-ignored-imports', {});
+  persist('radar-undo', null); persist('radar-filters', {}); persist(SESSION_KEY, session);
+}
+
+function resetRadarResults() {
+  bombsArray = []; favorites = new Set(); selectedForVersus = []; totalAnalyzed = 0;
+  ignoredImports = {}; importVersions = new Map(); importCursor = 0; undoArchive = null; renderedLimit = 60;
+  persist('radar-results', []); persist('radar-favorites', []); persist('radar-ignored-imports', {}); persist('radar-undo', null);
+  renderAllCards();
+}
+
+async function initializeSession() {
+  const status = await api('/api/status');
+  if (typeof status.session !== 'string' || !status.session) throw new Error('Riavvia il server per iniziare una nuova sessione.');
+  if (readStorage(SESSION_KEY, '') !== status.session) resetBrowserSession(status.session);
+}
 function persistFilters() {
   const values = Object.fromEntries(FILTER_IDS.map(id => [id, id === 'favorites-only' ? $(id).checked : $(id).value]));
   persist('radar-filters', values);
@@ -126,7 +149,7 @@ function renderSavedSearches() {
     '<div class="saved-search"><button class="saved-search-load" data-search="' + index + '" title="Carica ricerca">' + escapeHtml(search.name) +
     '</button><button class="saved-search-run" data-search="' + index + '" aria-label="Avvia ' + escapeHtml(search.name) +
     '">▶</button><button class="saved-search-delete" data-search="' + index + '" aria-label="Elimina ' + escapeHtml(search.name) + '">×</button></div>').join('') :
-    '<span class="saved-empty">Salva una ricerca per ritrovarla qui.</span>';
+    '<span class="saved-empty">Salva una ricerca per riutilizzarla in questa sessione.</span>';
 }
 function loadSavedSearch(search) {
   for (const platform of Object.keys(MARKET_HOSTS)) $('link-' + platform.toLowerCase()).value = search[platform.toLowerCase()] || '';
@@ -203,7 +226,7 @@ function renderAllCards() {
     '<div class="empty"><span class="empty-icon" aria-hidden="true">◎</span><h2>' +
     (bombsArray.length ? 'Nessun risultato con questi filtri' : 'La tua prossima scoperta parte da qui') +
     '</h2><p>' + (bombsArray.length ? 'Prova a cambiare il budget o a rimuovere un filtro.' :
-    'Cerca un portatile gaming, incolla una ricerca oppure importa gli annunci con l’estensione.') + '</p><button class="primary" data-empty-action="' + (bombsArray.length ? 'reset' : 'guide') + '">' + (bombsArray.length ? 'Azzera i filtri' : 'Prepara la prima ricerca') + '</button></div>';
+    'Cerca un NAS, un router, un portatile o un altro prodotto tecnologico; puoi anche importare gli annunci con l’estensione.') + '</p><button class="primary" data-empty-action="' + (bombsArray.length ? 'reset' : 'guide') + '">' + (bombsArray.length ? 'Azzera i filtri' : 'Prepara la prima ricerca') + '</button></div>';
   $('count-bombs').textContent = bombsArray.length;
   $('count-scanned').textContent = totalAnalyzed;
   $('count-favorites').textContent = bombsArray.filter(item => favorites.has(item.url)).length;
@@ -219,6 +242,7 @@ function renderAllCards() {
 }
 function cardTemplate(item) {
   const data = item.evalData, saved = favorites.has(item.url);
+  const generic = data.kind === 'generic';
   const history = item.priceHistory || [];
   const previousPrice = history.length > 1 ? history[history.length - 2].price : null;
   const change = previousPrice === null ? 0 : item.prezzo - previousPrice;
@@ -229,23 +253,25 @@ function cardTemplate(item) {
     '</time><span>' + euros.format(point.price) + '</span></li>').join('') + '</ol></details>' : '';
   const reason = explainListing(item);
   const reasonMarkup = '<div class="deal-reason"><strong>Perché è nel radar</strong><p>' +
-    (reason.difference > 0 ? euros.format(reason.difference) + ' sotto la stima indicativa.' : 'Salvato in precedenza: il prezzo attuale non è sotto la stima.') +
+    (generic ? 'Corrisponde alla ricerca corrente: confronta prezzo, modello e condizioni con gli altri annunci.' :
+    reason.difference > 0 ? euros.format(reason.difference) + ' sotto la stima indicativa.' : 'Il prezzo attuale non è sotto la stima indicativa.') +
     '</p>' + (reason.facts.length ? '<p>Nel testo: ' + reason.facts.map(escapeHtml).join(' · ') + '.</p>' : '') +
     (reason.warnings.length ? '<p class="deal-warning">Attenzione: ' + reason.warnings.map(escapeHtml).join(', ') + '.</p>' : '') +
     '<details><summary>Cosa verificare prima di comprare</summary><ul>' +
-    reason.missing.map(label => '<li>' + escapeHtml(label) + ': non riconosciuto nel testo.</li>').join('') +
-    '<li>Condizioni, batteria e configurazione esatta.</li><li>Venditore, spedizione e commissioni.</li></ul></details></div>';
+    reason.missing.map(label => '<li>' + escapeHtml(label) + ': da verificare nell’annuncio.</li>').join('') +
+    (generic ? '<li>Compatibilità, condizioni e garanzia.</li>' : '<li>Condizioni, batteria e configurazione esatta.</li>') +
+    '<li>Venditore, spedizione e commissioni.</li></ul></details></div>';
   const preview = item.image ? '<img src="' + escapeHtml(item.image) + '" alt="' + escapeHtml(item.titolo) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span>Nessuna anteprima</span>';
   return '<article class="card"><div class="card-image' + (item.image ? '' : ' card-image-empty') + '">' + preview + '</div><button class="favorite" data-action="favorite" data-url="' +
     escapeHtml(item.url) + '" aria-pressed="' + saved + '" aria-label="' + (saved ? 'Rimuovi dai preferiti' : 'Salva preferito') + '">' +
     (saved ? '★' : '☆') + '</button><div class="card-head"><span class="platform ' + item.platform.toLowerCase() + '">' + item.platform +
-    '</span><h2 class="card-title">' + escapeHtml(item.titolo) + '</h2><div class="power"><span>Indice hardware ' + data.vsScore +
-    '/100</span><span class="power-bar"><i style="width:' + data.vsScore + '%"></i></span></div></div><div class="card-body"><div class="tags">' +
+    '</span><h2 class="card-title">' + escapeHtml(item.titolo) + '</h2>' + (generic ? '<div class="power"><span>Valutazione manuale</span></div>' : '<div class="power"><span>Indice hardware ' + data.vsScore +
+    '/100</span><span class="power-bar"><i style="width:' + data.vsScore + '%"></i></span></div>') + '</div><div class="card-body"><div class="tags">' +
     data.tags.map(tag => '<span class="tag ' + tag.cls + '">' + escapeHtml(tag.text) + '</span>').join('') +
     '</div><div class="prices"><div><span class="price-label">Prezzo annuncio</span><strong class="ask-price">' + euros.format(item.prezzo) +
-    '</strong></div><div class="estimate"><span>Stima indicativa</span><strong>' + euros.format(data.stima) +
-    '</strong><span class="saving">Differenza ' + euros.format(data.margine) +
-    '</span></div></div>' + trend + historyMarkup + reasonMarkup + '<p class="card-note">Spedizione e commissioni da verificare.</p><time class="card-note" datetime="' +
+    '</strong></div><div class="estimate">' + (generic ? '<span>Confronto consigliato</span><strong>Da valutare</strong><span class="saving">Ordina per prezzo</span>' : '<span>Stima indicativa</span><strong>' + euros.format(data.stima) +
+    '</strong><span class="saving">Differenza ' + euros.format(data.margine) + '</span>') +
+    '</div></div>' + trend + historyMarkup + reasonMarkup + '<p class="card-note">Spedizione e commissioni da verificare.</p><time class="card-note" datetime="' +
     new Date(item.updatedAt).toISOString() + '">Aggiornato ' + new Date(item.updatedAt).toLocaleDateString('it-IT') +
     '</time></div><div class="card-foot"><label class="compare-label"><input class="compare-check" type="checkbox" data-url="' +
     escapeHtml(item.url) + '" ' + (selectedForVersus.includes(item.url) ? 'checked' : '') + '> Confronta</label><a href="' +
@@ -274,10 +300,15 @@ function upsertListing(item) {
   const url = canonicalUrl(item.url, item.platform);
   if (!url || !item.title) return false;
   const price = parseMoney(item.price);
-  const evaluation = price && analyzeHardware(item.title + ' ' + (item.details || ''), price);
+  const listingText = item.title + ' ' + (item.details || '');
+  if (/\b(custodia|cover|scatola vuota|solo scatola|cerco|compro|alimentatore per|caricabatterie per)\b/i.test(listingText)) return false;
+  const evaluation = price && (analyzeHardware(listingText, price) || {
+    stima: price, margine: 0, gpuName: 'Prodotto generico', vsScore: 0, confidence: 0, kind: 'generic',
+    tags: [{ text: 'Prezzo da confrontare', cls: 't-neutral' }]
+  });
   if (!evaluation) return false;
   const previous = bombsArray.find(result => result.url === url);
-  if (!previous && price > evaluation.stima * .95) return false;
+  if (!previous && evaluation.kind !== 'generic' && price > evaluation.stima * .95) return false;
   if (previous && item.updatedAt && Number(item.updatedAt) <= previous.updatedAt) return false;
   const updatedAt = Number(item.updatedAt) || Date.now();
   const priceHistory = previous?.priceHistory?.length ? [...previous.priceHistory] :
@@ -328,7 +359,13 @@ async function runScan() {
   if (radarStopped || scanController) return;
   let sources;
   try { sources = getSources(); } catch (error) { logMsg(error.message, 'log-warn'); setScanState('Controlla i link', error.message); return; }
-  if (!sources.length) { setScanState('Da dove partiamo?', 'Scrivi cosa cerchi nel campo a sinistra, per esempio laptop RTX 4070.'); logMsg('Inserisci una parola chiave o almeno un link.', 'log-warn'); $('market-query').focus(); return; }
+  if (!sources.length) { setScanState('Da dove partiamo?', 'Scrivi cosa cerchi nel campo a sinistra, per esempio NAS Synology o laptop RTX 4070.'); logMsg('Inserisci una parola chiave o almeno un link.', 'log-warn'); $('market-query').focus(); return; }
+  resetRadarResults();
+  try {
+    const previousImports = await api('/api/import/latest?after=0', { signal: AbortSignal.timeout(8000) });
+    importCursor = Number(previousImports.cursor) || 0;
+  } catch { /* La ricerca diretta può proseguire anche senza l’estensione. */ }
+  logMsg('Nuova ricerca: il radar precedente è stato azzerato.', 'log-ok');
   scanController = new AbortController();
   const signal = scanController.signal;
   $('btn-scan').disabled = true; $('btn-scan').classList.add('loading'); $('btn-stop').hidden = false;
@@ -375,6 +412,9 @@ async function runScan() {
     persistResults(); scanController = null; $('btn-scan').disabled = radarStopped; $('btn-clear').disabled = false;
     $('btn-scan').classList.remove('loading'); $('btn-text').textContent = 'Esegui ricerca';
     $('btn-stop').hidden = true; $('scan-progress').hidden = true; $('results-grid').setAttribute('aria-busy', 'false');
+    if (bombsArray.length && bombsArray.every(item => item.evalData.kind === 'generic') && $('sort-order').value === 'margin-desc') {
+      $('sort-order').value = 'price-asc'; persistFilters();
+    }
     renderAllCards(); importBrowserListings();
   }
 }
@@ -402,7 +442,7 @@ async function importBackup(event) {
       let changed = 0;
       for (const item of items) { totalAnalyzed++; changed += Number(upsertListing(item)); }
       persistResults(); renderAllCards();
-      logMsg(items.length + ' annunci analizzati; ' + changed + ' opportunità aggiunte o aggiornate. Gli annunci senza hardware riconosciuto o sopra la soglia stimata sono esclusi.', 'log-ok');
+      logMsg(items.length + ' annunci analizzati; ' + changed + ' risultati aggiunti o aggiornati. I prodotti generici restano disponibili per il confronto manuale.', 'log-ok');
       return;
     }
     const rows = Array.isArray(data) ? data : data.results;
@@ -525,8 +565,13 @@ $('btn-reset-filters').addEventListener('click', () => {
 });
 $('btn-more').addEventListener('click', () => { renderedLimit += 60; renderAllCards(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) importBrowserListings(); });
-restoreFilters(); renderAllCards(); renderSavedSearches();
-if (storageWarning) logMsg('Un archivio locale non è leggibile. Il dato originale è stato conservato.', 'log-warn');
-initialSync = initializeSearches();
+async function initializeApp() {
+  try { await initializeSession(); }
+  catch (error) { logMsg(error.message, 'log-warn'); }
+  restoreFilters(); renderAllCards(); renderSavedSearches();
+  if (storageWarning) logMsg('Un archivio locale non è leggibile. Il dato originale è stato conservato.', 'log-warn');
+  await initializeSearches();
+}
+initialSync = initializeApp();
 setInterval(importBrowserListings, 5000);
 initialSync.finally(importBrowserListings);

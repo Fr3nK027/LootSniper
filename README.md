@@ -1,6 +1,6 @@
-# LootSniper · occasioni gaming in locale
+# LootSniper · radar tecnologico in locale
 
-Cerca, salva e confronta portatili gaming usati su **Vinted, eBay e Subito**, dal tuo PC. Il programma apre una dashboard nel browser e conserva gli archivi sul dispositivo.
+Cerca e confronta portatili gaming, NAS, router e altra tecnologia usata su **Vinted, eBay e Subito**. Il programma apre automaticamente una dashboard locale nel browser.
 
 **Questa versione si esegue esclusivamente in locale.** GitHub distribuisce il progetto e la guida: non devi attivare GitHub Pages, configurare Supabase o inserire chiavi API. Per cercare nuovi annunci serve una connessione Internet; l’archivio già salvato si può consultare anche senza connessione.
 
@@ -40,7 +40,7 @@ Il pulsante **Giorno / Notte** accanto al logo cambia l’aspetto della dashboar
 
 ![Avvio guidato di LootSniper](docs/images/guida.png)
 
-In seguito avvia il programma dal collegamento **LootSniper** sul desktop o nel menu Start. La dashboard è disponibile su [http://127.0.0.1:8765](http://127.0.0.1:8765); in alto deve apparire **Server connesso**.
+In seguito usa soltanto il collegamento **LootSniper** sul desktop o nel menu Start: server e dashboard si aprono automaticamente. Non occorre cercare o digitare `127.0.0.1:8765`; quell’indirizzo serve solo come riferimento tecnico per la versione attuale.
 
 Per chiudere subito premi **Arresta LootSniper** nella barra laterale. Chiudendo tutte le schede della dashboard, il server termina automaticamente dopo circa 45 secondi; se il browser si arresta senza avvisare, la pulizia avviene dopo circa 3 minuti. Non rimane un CMD da chiudere.
 
@@ -64,7 +64,7 @@ Per la diagnostica con terminale visibile usa `python launcher.py` e chiudi con 
 
 ## Esegui una ricerca
 
-1. Nel campo **Cosa stai cercando?** scrivi, per esempio, `laptop RTX 4070`.
+1. Nel campo **Cosa stai cercando?** scrivi, per esempio, `NAS Synology economico`, `router Wi-Fi 7` oppure `laptop RTX 4070`.
 2. Premi **Genera i tre link dalla ricerca**.
 3. Se vuoi filtri specifici, apri il marketplace, imposta i filtri sul sito e copia l’URL nel campo Vinted, eBay o Subito corrispondente.
 4. Lascia vuoti i campi delle piattaforme che non vuoi interrogare. Se cambi nuovamente la ricerca rapida, i link possono essere rigenerati.
@@ -72,7 +72,9 @@ Per la diagnostica con terminale visibile usa `python launcher.py` e chiudi con 
 6. Premi **Esegui ricerca** e segui il messaggio di stato. Il riquadro **Attività** contiene i dettagli tecnici.
 7. Per fermare il lavoro premi **Interrompi ricerca**: quanto raccolto rimane salvato.
 
-LootSniper seleziona portatili con hardware riconosciuto e prezzo inizialmente entro il 95% della stima indicativa. Per questo gli annunci analizzati possono essere più numerosi delle opportunità aggiunte.
+Ogni volta che premi **Esegui ricerca**, LootSniper svuota il radar precedente e riparte da zero. Anche un nuovo avvio azzera annunci, preferiti, filtri, importazioni e ricerche salvate. Tema e configurazione Discord rimangono memorizzati.
+
+Per i portatili gaming riconosciuti, LootSniper evidenzia quelli con prezzo inizialmente entro il 95% della stima indicativa. NAS, router e altri prodotti vengono comunque mostrati e ordinati per prezzo: in questi casi la valutazione è manuale perché non viene inventata una quotazione senza dati affidabili.
 
 Alcuni marketplace possono bloccare la lettura diretta o caricare gli annunci soltanto nel browser. In questi casi usa l’estensione descritta al passo 6.
 
@@ -81,9 +83,9 @@ Alcuni marketplace possono bloccare la lettura diretta o caricare gli annunci so
 1. Prepara i link.
 2. Scrivi un nome in **Nome della ricerca**.
 3. Premi **Salva**.
-4. In seguito premi il nome per ricaricare i link, **▶** per eseguirli o **×** per eliminare la ricerca.
+4. Durante la sessione premi il nome per ricaricare i link, **▶** per eseguirli o **×** per eliminare la ricerca.
 
-Le ricerche salvate sono condivise con l’estensione attraverso il server locale.
+Le ricerche salvate sono condivise con l’estensione durante la sessione corrente e vengono azzerate al riavvio dell’app.
 
 ## Valuta, filtra e confronta
 
@@ -140,7 +142,7 @@ Il browser, almeno una scheda della dashboard e il server locale devono restare 
 
 ## Notifiche Discord: pubblica le bombe nel tuo canale
 
-Questa funzione è facoltativa e inizialmente disattivata. Non serve creare un bot.
+Questa funzione è facoltativa e inizialmente disattivata. Non serve creare un bot. Le notifiche automatiche riguardano le occasioni gaming per cui LootSniper dispone di una stima; NAS, router e prodotti generici rimangono nel radar per il confronto manuale.
 
 ![Pannello Discord nelle impostazioni di LootSniper](docs/images/discord.png)
 
@@ -175,9 +177,9 @@ Se non hai annunci ma vuoi salvare le ricerche, usa **Archivio → Backup comple
 
 | Dato | Dove si trova |
 | --- | --- |
-| Ricerche condivise con l’estensione | `radar-searches.json`, nella cartella del progetto |
-| Ultimi 5.000 annunci importati dall’estensione | `radar-imports.json`, nella cartella del progetto |
-| Opportunità, preferiti, filtri e recupero archivio | Memoria locale del browser |
+| Ricerche condivise con l’estensione | `radar-searches.json`, azzerato a ogni avvio |
+| Annunci importati dall’estensione | `radar-imports.json`, azzerato a ogni avvio |
+| Risultati, preferiti, filtri e recupero archivio | Memoria del browser, azzerata per ogni nuova sessione |
 | Configurazione privata Discord, coda e invii confermati | `radar-discord.json` |
 | Diagnostica del server e dell’avvio nascosto | `radar-server.log`, `radar-avvio.log` |
 | Backup esportati | Cartella download scelta nel browser |
@@ -189,10 +191,10 @@ I file dati vengono creati quando necessari. Un progetto appena scaricato parte 
 1. Esporta un backup prima dell’aggiornamento.
 2. Premi **Arresta LootSniper** nella vecchia dashboard.
 3. Scarica ed estrai il nuovo ZIP.
-4. Esegui di nuovo **Installa LootSniper.cmd**. L’installer aggiorna i file del programma, riusa il runtime già verificato e conserva ricerche, importazioni e configur Discord presenti nella cartella installata.
+4. Esegui di nuovo **Installa LootSniper.cmd**. L’installer aggiorna i file del programma, riusa il runtime già verificato e conserva la configurazione Discord. Ricerche e importazioni ripartono vuote al successivo avvio.
 5. Ricarica l’estensione dalla pagina delle estensioni del browser e poi ricarica le schede dei marketplace.
 
-Gli annunci e i preferiti della dashboard restano nella memoria del browser: usando lo stesso browser e `127.0.0.1:8765` ricompaiono automaticamente.
+Per conservare annunci o preferiti oltre la sessione, usa **Esporta backup** prima di chiudere e **Importa backup** nella sessione successiva.
 
 ## Risoluzione dei problemi
 
@@ -205,13 +207,13 @@ Gli annunci e i preferiti della dashboard restano nella memoria del browser: usa
 | L’avvio nascosto segnala un errore | Leggi `radar-avvio.log` e `radar-server.log` nella cartella del progetto. |
 | Script VBS non disponibile sul PC | Apri un terminale nella cartella ed esegui `py -3 launcher.py --background`; poi chiudi il terminale. |
 | Porta 8765 occupata | Arresta la vecchia copia; non avviare due copie diverse insieme. |
-| Server offline | Riapri `avvia radar.vbs` e visita `http://127.0.0.1:8765`. |
+| Server offline | Chiudi la scheda e riapri LootSniper dal collegamento sul desktop o nel menu Start. |
 | Discord non invia | Salva un webhook valido, prova il messaggio di test e controlla soglia e stato. La dashboard deve essere aperta per rilevare nuove bombe. |
 | Nessuna opportunità trovata | Azzera i filtri, controlla i link e il riquadro Attività; verifica se gli annunci rientrano nei criteri hardware e prezzo. |
 | Un marketplace non viene letto | Apri la ricerca nel browser e usa l’estensione dopo il caricamento. |
 | L’estensione non risponde | Ricarica l’estensione e le schede dei marketplace; controlla che il server sia avviato. |
 | Ricerche non sincronizzate | Ricarica la dashboard a server attivo. Se compare, usa **Recupera ricerche dalla copia locale**. |
-| Archivio apparentemente vuoto | Usa lo stesso browser e indirizzo; controlla **Solo preferiti** e gli altri filtri, oppure importa un backup. |
+| Archivio apparentemente vuoto | Dopo un riavvio o una nuova ricerca è normale: LootSniper riparte da zero. Per recuperare dati precedenti importa un backup esportato. |
 | File dati danneggiato | Il file viene conservato. Arresta il server e ripristina una copia valida; non cancellarlo senza un backup. |
 
 ## Pubblicare o contribuire

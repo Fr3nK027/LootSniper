@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Cerca, salva e confronta portatili gaming usati su Vinted, eBay e Subito.">
-  <title>LootSniper | Il tuo prossimo portatile</title>
+  <meta name="description" content="Cerca e confronta occasioni usate su Vinted, eBay e Subito.">
+  <title>LootSniper | Il tuo radar dell’usato</title>
   <link rel="icon" href="assets/lootsniper.svg" type="image/svg+xml">
   <script src="theme.js"></script>
   <link rel="stylesheet" href="styles.css">
@@ -20,9 +20,9 @@
   <div class="app-shell">
     <aside class="sidebar" aria-label="Configurazione ricerca">
       <div class="brand-intro"><div class="brand-row"><div class="brand"><img src="assets/lootsniper.svg" alt=""> LootSniper</div><button class="theme-toggle" id="btn-theme" type="button" aria-pressed="false" aria-label="Passa alla modalità notte"><span id="theme-icon" aria-hidden="true">☀</span><span id="theme-label">Giorno</span></button></div><p class="kicker">Tre marketplace. Un solo posto.</p></div>
-      <p class="sidebar-copy">Cerca il tuo prossimo portatile gaming e tieni vicine le occasioni da approfondire.</p>
+      <p class="sidebar-copy">Cerca tecnologia usata e confronta in una sola sessione le occasioni da approfondire.</p>
       <div class="source-list">
-        <div class="field"><label for="market-query">Cosa stai cercando?</label><input id="market-query" type="search" placeholder="es. laptop RTX 4070" autocomplete="off"><button class="text-button" id="btn-generate-links">Genera i tre link dalla ricerca</button></div>
+        <div class="field"><label for="market-query">Cosa stai cercando?</label><input id="market-query" type="search" placeholder="es. NAS, router o laptop RTX 4070" autocomplete="off"><button class="text-button" id="btn-generate-links">Genera i tre link dalla ricerca</button></div>
         <details class="source-details"><summary>Link dei marketplace <span>Personalizza i filtri sui siti</span></summary>
           <div class="field"><label for="link-vinted"><span class="source-dot vinted"></span> Vinted</label><input id="link-vinted" type="url" placeholder="https://www.vinted.it/..." autocomplete="off"><a id="open-vinted" class="source-open" target="_blank" rel="noopener noreferrer" hidden>Apri ricerca Vinted ↗</a></div>
           <div class="field"><label for="link-ebay"><span class="source-dot ebay"></span> eBay</label><input id="link-ebay" type="url" placeholder="https://www.ebay.it/..." autocomplete="off"><a id="open-ebay" class="source-open" target="_blank" rel="noopener noreferrer" hidden>Apri ricerca eBay ↗</a></div>
@@ -45,10 +45,10 @@
       <button class="secondary" id="btn-shutdown">Arresta LootSniper</button>
     </aside>
     <main class="main" id="main">
-      <header class="topline"><div><p class="kicker">Il tuo osservatorio personale</p><h1>Scopri. Valuta.<br><span>Scegli meglio.</span></h1><p class="subtitle">Le occasioni per il tuo prossimo portatile gaming, raccolte da Vinted, eBay e Subito.</p></div><span class="live-dot offline" id="connection-status" role="status">Connessione…</span></header>
+      <header class="topline"><div><p class="kicker">Il tuo osservatorio personale</p><h1>Scopri. Valuta.<br><span>Scegli meglio.</span></h1><p class="subtitle">Tecnologia usata da Vinted, eBay e Subito, raccolta per la ricerca che stai facendo adesso.</p></div><span class="live-dot offline" id="connection-status" role="status">Connessione…</span></header>
       <div class="offline-banner" id="offline-help" hidden>Il server locale non è raggiungibile. Avvia <strong>avvia radar.vbs</strong>: puoi comunque consultare ed esportare gli annunci salvati.</div>
       <section class="scan-feedback" id="scan-feedback" hidden aria-live="polite"><strong id="scan-feedback-title"></strong><p id="scan-feedback-body"></p><button class="text-button" id="btn-scan-help" hidden>Come importare con l’estensione →</button></section>
-      <section class="stat-strip" aria-label="Statistiche"><div class="stat"><span>Nel tuo radar</span><strong id="count-bombs">0</strong><small>opportunità salvate</small></div><div class="stat"><span>Questa sessione</span><strong id="count-scanned">0</strong><small>annunci analizzati</small></div><div class="stat"><span>Da tenere d’occhio</span><strong id="count-favorites">0</strong><small>annunci preferiti</small></div></section>
+      <section class="stat-strip" aria-label="Statistiche"><div class="stat"><span>Nel tuo radar</span><strong id="count-bombs">0</strong><small>si azzera a ogni ricerca</small></div><div class="stat"><span>Questa sessione</span><strong id="count-scanned">0</strong><small>annunci analizzati</small></div><div class="stat"><span>Da tenere d’occhio</span><strong id="count-favorites">0</strong><small>annunci preferiti</small></div></section>
       <div class="section-heading"><h2>Le tue opportunità <span id="results-count" tabindex="-1" role="status">0 risultati</span></h2><div class="top-actions"><button class="secondary" id="btn-export">Esporta backup</button><button class="secondary" id="btn-import-backup">Importa backup</button><details class="archive-menu"><summary>Archivio</summary><div><button class="text-button" id="btn-backup">Backup completo</button><button class="text-button" id="btn-clear">Svuota archivio</button><button class="text-button" id="btn-undo" hidden>Annulla svuotamento</button></div></details></div></div>
       <input type="file" id="backup-file" accept=".json,application/json" hidden>
       <section class="toolbar" aria-label="Filtri risultati">
@@ -75,7 +75,7 @@
     <p>Configura la ricerca e scegli come ricevere le occasioni.</p>
     <details open><summary>Ricerca</summary><label class="check-row"><input id="deep-scan" type="checkbox" checked> Più pagine <span class="helper">max 20 per sito</span></label><p>Disattiva “Più pagine” per un controllo veloce della prima pagina di ogni sito.</p></details>
     <details class="runtime-settings"><summary>Discord · pubblica le bombe</summary>
-        <p class="helper">Invia le nuove opportunità al tuo canale Discord. Il webhook viene conservato soltanto sul PC.</p>
+        <p class="helper">Invia al tuo canale le nuove occasioni gaming sotto la stima. NAS, router e prodotti generici restano a valutazione manuale. Il webhook viene conservato soltanto sul PC.</p>
         <div class="field"><label for="discord-url">URL webhook Discord</label><input id="discord-url" type="password" autocomplete="off" placeholder="https://discord.com/api/webhooks/…"></div>
         <div class="field"><label for="discord-margin">Differenza stimata minima (€)</label><input id="discord-margin" type="number" min="0" max="100000" step="10" value="0"></div>
         <label class="check-row"><input id="discord-enabled" type="checkbox"> Pubblica le nuove bombe</label>
@@ -83,13 +83,13 @@
         <p class="helper" id="discord-status" role="status">Caricamento impostazioni…</p>
       </details>
     <details id="extension-guide"><summary>Estensione Chrome / Edge · guida</summary><p>Se un sito richiede accesso o una verifica, aprilo nel browser e importa gli annunci con l’estensione.</p><ol><li>Apri <code>chrome://extensions</code> oppure <code>edge://extensions</code>.</li><li>Attiva <strong>Modalità sviluppatore</strong>, premi <strong>Carica estensione non pacchettizzata</strong> e scegli <code>browser-bridge</code> dentro la cartella installata: <code>%LOCALAPPDATA%\Programs\LootSniper</code>.</li><li>Apri una ricerca su Vinted, eBay o Subito. Premi l’icona dell’estensione e importa gli annunci, lasciando LootSniper aperto.</li></ol><p>Se usi la versione portatile, scegli invece la cartella browser-bridge accanto al programma. L’installazione dell’estensione è facoltativa e richiede questi passaggi manuali.</p></details>
-    <details><summary>Come vengono scelte le opportunità?</summary><p>Gli annunci nuovi entrano nel radar quando il prezzo è almeno il 5% sotto una stima basata sull’hardware riconosciuto nel testo. Si tratta di regole indicative: il prezzo di mercato, le condizioni reali e l’affidabilità del venditore vanno verificati.</p><p>Un annuncio già salvato rimane visibile anche se il suo prezzo aumenta. Usa i filtri per scegliere quali vedere.</p></details>
+    <details><summary>Come vengono scelti gli annunci?</summary><p>Per i portatili gaming riconosciuti, LootSniper evidenzia quelli almeno il 5% sotto una stima indicativa. NAS, router e altri prodotti entrano comunque nel radar e vengono ordinati per prezzo, così puoi confrontarli manualmente.</p><p>Ogni nuova ricerca svuota il radar precedente. Prezzo di mercato, condizioni reali, compatibilità e affidabilità del venditore vanno sempre verificati.</p></details>
   </dialog>
   <dialog class="welcome-dialog" id="welcome-dialog" aria-labelledby="guide-title">
     <p class="kicker" id="guide-progress" role="status">Passaggio 1 di 3</p>
     <div class="dialog-heading"><h2 id="guide-title" tabindex="-1">Benvenuto in LootSniper</h2><button class="secondary" id="guide-close" aria-label="Salta la guida">×</button></div>
-    <section data-step="0"><p>Il tuo prossimo portatile gaming, con tutte le occasioni in un solo posto. Bastano tre mosse.</p><ol class="guide-steps"><li><span class="guide-number">1</span><div>Cerca<small>Una parola chiave per Vinted, eBay e Subito.</small></div></li><li><span class="guide-number">2</span><div>Valuta<small>Prezzi, caratteristiche e dettagli da verificare.</small></div></li><li><span class="guide-number">3</span><div>Scegli<small>Salva i preferiti e confronta fino a tre annunci.</small></div></li></ol><p class="helper">Nessun account LootSniper. I tuoi dati restano sul PC e nel browser.</p></section>
-    <section data-step="1" hidden><p>Parti da una scheda video o da un modello. Potrai cambiare tutto dalla dashboard.</p><div class="guide-fields"><div class="field"><label for="guide-query">Cosa cerchi?</label><input id="guide-query" type="search" maxlength="200" required placeholder="es. laptop RTX 4070"></div><div class="field"><label for="guide-budget">Budget massimo (€) · facoltativo</label><input id="guide-budget" type="number" min="1" max="100000" step="1" placeholder="es. 1000"></div></div><p class="helper">Il budget filtra i risultati mostrati nella dashboard.</p></section>
+    <section data-step="0"><p>Le occasioni tecnologiche che cerchi, tutte in un solo posto. Bastano tre mosse.</p><ol class="guide-steps"><li><span class="guide-number">1</span><div>Cerca<small>Una parola chiave per Vinted, eBay e Subito.</small></div></li><li><span class="guide-number">2</span><div>Valuta<small>Prezzi, caratteristiche e dettagli da verificare.</small></div></li><li><span class="guide-number">3</span><div>Scegli<small>Salva i preferiti e confronta fino a tre annunci.</small></div></li></ol><p class="helper">Ogni nuova ricerca parte da un radar vuoto. Tema e Discord rimangono configurati.</p></section>
+    <section data-step="1" hidden><p>Parti da un prodotto o da un modello. Può essere un NAS, un router o un portatile gaming.</p><div class="guide-fields"><div class="field"><label for="guide-query">Cosa cerchi?</label><input id="guide-query" type="search" maxlength="200" required placeholder="es. NAS Synology economico"></div><div class="field"><label for="guide-budget">Budget massimo (€) · facoltativo</label><input id="guide-budget" type="number" min="1" max="100000" step="1" placeholder="es. 300"></div></div><p class="helper">Il budget filtra i risultati mostrati nella dashboard.</p></section>
     <section data-step="2" hidden><p>Premi <strong>Esegui ricerca</strong> nella dashboard per cominciare. Salva la ricerca con un nome se vuoi ritrovarla.</p><ol class="guide-steps"><li><div>Un sito richiede una verifica?<small>Aprilo nel browser e usa l’estensione. Trovi i passaggi in Impostazioni.</small></div></li><li><div>Vuoi le bombe su Discord?<small>Aggiungi il webhook in Impostazioni → Discord. Puoi farlo anche dopo.</small></div></li></ol><p class="helper">Le stime aiutano a scegliere cosa approfondire: controlla sempre l’annuncio originale.</p></section>
     <div class="guide-actions"><button class="secondary" id="guide-back" hidden>Indietro</button><button class="primary" id="guide-next">Continua</button></div>
   </dialog>

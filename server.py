@@ -10,6 +10,7 @@ import json
 import mimetypes
 import os
 import re
+import secrets
 import threading
 import time
 from radar_discord import DiscordService
@@ -23,7 +24,7 @@ ALLOWED_HOSTS = {host for domain in PLATFORMS.values() for host in (domain, "www
 STATIC_FILES = {"radar usato 3 market.html", "app.js", "styles.css", "radar-core.js", "radar-runtime.js", "browser-bridge/listings.js", "experience.css", "radar-guide.js", "theme.js", "assets/lootsniper.svg", "assets/lootsniper.ico"}
 WORKSPACE_ID = hashlib.sha256(str(ROOT).casefold().encode()).hexdigest()[:16]
 PORT = 8765
-VERSION = "6.1"
+VERSION = "6.2"
 MAX_BODY = 2 * 1024 * 1024
 MAX_HTML = 10 * 1024 * 1024
 browser_items_lock = threading.Lock()
@@ -72,6 +73,14 @@ def atomic_write(path, value):
         stream.flush()
         os.fsync(stream.fileno())
     temporary.replace(path)
+
+
+def reset_session_data():
+    """Start every application run without searches or imported listings."""
+    with searches_lock:
+        atomic_write(SEARCHES_FILE, [])
+    with browser_items_lock:
+        atomic_write(IMPORTS_FILE, [])
 
 
 def revision(searches):
@@ -147,7 +156,9 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         try:
             if parsed.path == "/api/status":
-                self.send_json(200, {"online": True, "port": self.server.server_address[1], "version": VERSION, "workspace": WORKSPACE_ID})
+                self.send_json(200, {"online": True, "port": self.server.server_address[1], "version": VERSION,
+                                     "workspace": WORKSPACE_ID,
+                                     "session": getattr(self.server, "session_id", "test-session")})
             elif parsed.path == '/api/discord':
                 if not self.dashboard_request():
                     self.send_json(403, {'error': 'Usa la dashboard locale per Discord'})
@@ -346,6 +357,7 @@ class RadarServer(ThreadingHTTPServer):
 
     def __init__(self, address, handler=Handler, auto_stop=False, data_root=ROOT):
         super().__init__(address, handler)
+        self.session_id = secrets.token_urlsafe(18)
         self.lifetime = DashboardLifetime(auto_stop)
         self.discord = DiscordService(data_root, atomic_write, canonical_url)
 
@@ -364,6 +376,7 @@ if __name__ == "__main__":
     print(f"LootSniper locale: http://127.0.0.1:{args.port}")
     try:
         with RadarServer(("127.0.0.1", args.port), auto_stop=args.auto_stop) as httpd:
+            reset_session_data()
             httpd.discord.start()
             try:
                 httpd.serve_forever()

@@ -47,6 +47,9 @@ function analyzeHardware(text, price) {
 
 function explainListing(item) {
   const text = normalizeListingText(item.titolo + ' ' + (item.details || ''));
+  if (item.evalData?.kind === 'generic') {
+    return { difference: 0, facts: [], missing: ['Modello, specifiche e accessori inclusi'], warnings: [] };
+  }
   const detected = analyzeHardware(text, item.prezzo);
   const facts = detected ? detected.tags.filter(tag => tag.cls === 't-gpu' || /RAM|Display/.test(tag.text) && tag.cls === 't-up').map(tag => tag.text) : [];
   const missing = [];
@@ -122,6 +125,7 @@ function cleanResult(item) {
     priceHistory: (Array.isArray(item.priceHistory) ? item.priceHistory : []).filter(point => point && Number.isFinite(point.price) && point.price > 0)
       .slice(-20).map(point => ({ price: point.price, at: validTimestamp(point.at) })),
     evalData: { stima: data.stima, margine: data.stima - price, gpuName: String(data.gpuName || 'Da verificare'),
+      kind: data.kind === 'generic' ? 'generic' : 'hardware',
       vsScore: Math.max(0, Math.min(100, Number(data.vsScore) || 0)),
       confidence: Math.max(0, Math.min(100, Number(data.confidence) || 45)),
       tags: data.tags.filter(tag => tag && typeof tag.text === 'string').map(tag => ({
