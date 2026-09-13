@@ -76,6 +76,8 @@ Ogni volta che premi **Esegui ricerca**, LootSniper svuota il radar precedente e
 
 Per i portatili gaming riconosciuti, LootSniper evidenzia quelli con prezzo inizialmente entro il 95% della stima indicativa. NAS, router e altri prodotti vengono comunque mostrati e ordinati per prezzo: in questi casi la valutazione è manuale perché non viene inventata una quotazione senza dati affidabili.
 
+Per l’elettronica generica, LootSniper evidenzia soltanto caratteristiche scritte nell’annuncio: memoria, archiviazione, numero di bay, standard Wi-Fi, velocità di rete, 5G e Dual SIM. Nella tabella di confronto le stime non disponibili restano esplicitamente indicate come **confronto manuale**.
+
 Alcuni marketplace possono bloccare la lettura diretta o caricare gli annunci soltanto nel browser. In questi casi usa l’estensione descritta al passo 6.
 
 ### Salva una ricerca
@@ -120,7 +122,7 @@ Per confrontare due o tre annunci:
 2. Premi il pulsante **Confronta** nella barra in basso.
 3. Leggi la tabella e chiudila con **×** oppure **Esc**.
 
-![Confronto di due annunci dimostrativi nella dashboard](docs/images/confronto.png)
+![Confronto tra un portatile gaming e un NAS dimostrativi](docs/images/confronto.png)
 
 **Stime e indice hardware sono indicativi:** non sono quotazioni aggiornate, benchmark o una garanzia di rivendita. Controlla prezzo, configurazione, condizioni, spedizione e commissioni nell’annuncio originale. I rialzi e ribassi mostrati si basano sui prezzi osservati da LootSniper, non su uno storico completo del marketplace.
 

@@ -45,10 +45,54 @@ function analyzeHardware(text, price) {
   return { stima: estimated, stimaNuovo: Math.round(estimated * (estimated > 3000 ? 1.55 : 1.4)), reference: null, tags, margine: estimated - price, gpuName: detectedGpu || 'Gaming Laptop', vsScore, confidence };
 }
 
+function analyzeGenericFeatures(value) {
+  const text = normalizeListingText(value);
+  const category = /\b(nas|synology|qnap|asustor|terramaster)\b/.test(text) ? 'NAS' :
+    /\b(router|modem|access point|sistema mesh|wi-?fi mesh)\b/.test(text) ? 'Router / rete' :
+    /\b(server|poweredge|proliant|thinksystem|xeon|epyc)\b/.test(text) ? 'Server' :
+    /\b(smartphone|telefono|cellulare|iphone|galaxy|pixel)\b/.test(text) ? 'Smartphone' :
+    /\b(scheda video|gpu|processore|cpu|memoria ram|ssd|nvme)\b/.test(text) ? 'Componente PC' : 'Elettronica';
+  const facts = [], tags = [], warnings = [], addFact = label => {
+    if (!facts.includes(label)) { facts.push(label); tags.push({ text: label, cls: 't-gpu' }); }
+  };
+  const ramMatch = text.match(/\b(4|8|16|32|64|96|128|256)\s*(?:gb|g)\s*(?:di\s+)?ram\b|\bram\s*(?:da\s*)?(4|8|16|32|64|96|128|256)\s*(?:gb|g)\b/);
+  if (ramMatch) addFact(Number(ramMatch[1] || ramMatch[2]) + ' GB RAM');
+  const storageMatch = text.match(/\b(\d+(?:[.,]\d+)?)\s*(gb|tb)\s*(?:di\s+)?(?:ssd|nvme|hdd|storage|archiviazione|rom)\b|\b(?:ssd|nvme|hdd|storage|archiviazione|rom)\s*(?:da\s*)?(\d+(?:[.,]\d+)?)\s*(gb|tb)\b/);
+  let storage = storageMatch && ((storageMatch[1] ? storageMatch[1] + ' ' + storageMatch[2] : storageMatch[3] + ' ' + storageMatch[4]).replace('.', ',').toUpperCase());
+  if (!storage && ['NAS', 'Server'].includes(category)) {
+    const capacity = text.match(/\b(\d+(?:[.,]\d+)?)\s*tb\b/);
+    if (capacity) storage = capacity[1].replace('.', ',') + ' TB indicati';
+  }
+  if (!storage && category === 'Smartphone') {
+    const capacity = text.match(/\b(32|64|128|256|512|1024)\s*gb\b(?!\s*(?:ram|vram))/);
+    if (capacity) storage = capacity[1] + ' GB memoria';
+  }
+  if (storage) addFact(storage);
+  const bayMatch = text.match(/\b(1|2|4|5|6|8|12|16|24)\s*(?:bay|baie|vani(?:\s+dischi)?)\b/);
+  if (bayMatch) addFact(bayMatch[1] + ' bay');
+  const wifiMatch = text.match(/\bwi-?fi\s*(4|5|6e?|7)\b/);
+  if (wifiMatch) addFact('Wi-Fi ' + wifiMatch[1].toUpperCase());
+  const ethernetMatch = text.match(/\b(1|2[.,]5|5|10)\s*(gbit|gbps|gbe)\b/);
+  if (ethernetMatch) addFact(ethernetMatch[1].replace('.', ',') + (ethernetMatch[2] === 'gbe' ? ' GbE' : ' Gbps'));
+  if (['Router / rete', 'Smartphone'].includes(category) && /\b5g\b/.test(text)) addFact('Connettività 5G');
+  if (category === 'Smartphone' && /\bdual\s*sim\b/.test(text)) addFact('Dual SIM');
+  const addWarning = label => { warnings.push(label); tags.push({ text: label, cls: 't-down' }); };
+  if (/\b(senza dischi|diskless|no hdd|no ssd)\b/.test(text)) addWarning('Senza dischi');
+  if (/\b(rotto|non funzionante|da riparare|per ricambi|non si accende)\b/.test(text)) addWarning('Da riparare');
+  if (category === 'Smartphone' && /\b(icloud|account|bloccato)\b/.test(text)) addWarning('Possibile blocco account');
+  const missing = category === 'NAS' ? [!bayMatch && 'Numero di bay', !storage && 'Dischi inclusi e capacità'] :
+    category === 'Router / rete' ? [!wifiMatch && !ethernetMatch && 'Standard Wi-Fi e porte di rete'] :
+    category === 'Server' ? [!ramMatch && 'Memoria RAM', !storage && 'Archiviazione e dischi inclusi'] :
+    category === 'Smartphone' ? [!storage && 'Memoria interna', 'Stato della batteria'] :
+    category === 'Componente PC' ? ['Compatibilità e modello esatto'] : ['Modello esatto e accessori inclusi'];
+  return { category, facts, missing: missing.filter(Boolean), warnings, tags: tags.slice(0, 6) };
+}
+
 function explainListing(item) {
   const text = normalizeListingText(item.titolo + ' ' + (item.details || ''));
   if (item.evalData?.kind === 'generic') {
-    return { difference: 0, facts: [], missing: ['Modello, specifiche e accessori inclusi'], warnings: [] };
+    const generic = analyzeGenericFeatures(text);
+    return { difference: 0, facts: generic.facts, missing: generic.missing, warnings: generic.warnings };
   }
   const detected = analyzeHardware(text, item.prezzo);
   const facts = detected ? detected.tags.filter(tag => tag.cls === 't-gpu' || /RAM|Display/.test(tag.text) && tag.cls === 't-up').map(tag => tag.text) : [];
@@ -119,24 +163,30 @@ function cleanResult(item) {
   if (!item || !Object.hasOwn(MARKET_HOSTS, item.platform) || !item.titolo || !item.evalData) return null;
   const url = canonicalUrl(item.url, item.platform), price = Number(item.prezzo), data = item.evalData;
   if (!url || !Number.isFinite(price) || price <= 0 || !Number.isFinite(data.stima) || !Array.isArray(data.tags)) return null;
-  return { titolo: String(item.titolo).slice(0, 500), prezzo: price, url, platform: item.platform,
-    image: safeUrl(item.image), details: String(item.details || '').slice(0, 6000),
+  const title = String(item.titolo).slice(0, 500), details = String(item.details || '').slice(0, 6000);
+  const kind = data.kind === 'generic' ? 'generic' : 'hardware';
+  const mappedTags = data.tags.filter(tag => tag && typeof tag.text === 'string').map(tag => ({
+    text: ({ 'CPU top +300 EUR': 'CPU fascia alta', 'Brand eco -20%': 'Serie essenziale',
+      '2TB storage': '2 TB di archiviazione', '4TB storage': '4 TB di archiviazione' }[tag.text] || tag.text).slice(0, 100),
+    cls: ['t-up', 't-down', 't-gpu', 't-neutral'].includes(tag.cls) ? tag.cls : 't-neutral'
+  }));
+  const generic = kind === 'generic' ? analyzeGenericFeatures(title + ' ' + details) : null;
+  const tags = generic ? [...mappedTags, ...generic.tags].filter((tag, index, array) =>
+    array.findIndex(candidate => candidate.text.toLowerCase() === tag.text.toLowerCase()) === index).slice(0, 10) : mappedTags;
+  return { titolo: title, prezzo: price, url, platform: item.platform,
+    image: safeUrl(item.image), details,
     firstSeen: validTimestamp(item.firstSeen), updatedAt: validTimestamp(item.updatedAt),
     priceHistory: (Array.isArray(item.priceHistory) ? item.priceHistory : []).filter(point => point && Number.isFinite(point.price) && point.price > 0)
       .slice(-20).map(point => ({ price: point.price, at: validTimestamp(point.at) })),
-    evalData: { stima: data.stima, margine: data.stima - price, gpuName: String(data.gpuName || 'Da verificare'),
-      kind: data.kind === 'generic' ? 'generic' : 'hardware',
+    evalData: { stima: data.stima, margine: data.stima - price, gpuName: generic ? generic.category : String(data.gpuName || 'Da verificare'),
+      kind,
       vsScore: Math.max(0, Math.min(100, Number(data.vsScore) || 0)),
       confidence: Math.max(0, Math.min(100, Number(data.confidence) || 45)),
-      tags: data.tags.filter(tag => tag && typeof tag.text === 'string').map(tag => ({
-        text: ({ 'CPU top +300 EUR': 'CPU fascia alta', 'Brand eco -20%': 'Serie essenziale',
-          '2TB storage': '2 TB di archiviazione', '4TB storage': '4 TB di archiviazione' }[tag.text] || tag.text).slice(0, 100),
-        cls: ['t-up', 't-down', 't-gpu', 't-neutral'].includes(tag.cls) ? tag.cls : 't-neutral'
-      })) }
+      tags }
   };
 }
 function validTimestamp(value) {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 && number <= Date.now() + 86400000 ? number : Date.now();
 }
-if (typeof module !== 'undefined') module.exports = { explainListing, parseMoney, extractPrices, analyzeHardware, normalizeListingText, safeUrl, canonicalUrl, pageUrl, escapeHtml, cleanResult };
+if (typeof module !== 'undefined') module.exports = { explainListing, analyzeGenericFeatures, parseMoney, extractPrices, analyzeHardware, normalizeListingText, safeUrl, canonicalUrl, pageUrl, escapeHtml, cleanResult };

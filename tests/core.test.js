@@ -67,3 +67,25 @@ test('listing explanation separates observed specifications from missing details
   assert.ok(explanation.missing.includes('Capacità di archiviazione'));
   assert.ok(explanation.missing.includes('Processore'));
 });
+test('generic electronics expose only specifications found in listing text', () => {
+  const nas = core.analyzeGenericFeatures('NAS Synology 4 bay con 8TB HDD e rete 2.5 GbE');
+  assert.equal(nas.category, 'NAS');
+  assert.deepEqual(nas.facts, ['8 TB', '4 bay', '2,5 GbE']);
+  assert.deepEqual(nas.warnings, []);
+  assert.ok(!nas.missing.includes('Numero di bay'));
+  const router = core.analyzeGenericFeatures('Router WiFi 7 mesh 10 Gbps');
+  assert.equal(router.category, 'Router / rete');
+  assert.ok(router.facts.includes('Wi-Fi 7'));
+  assert.ok(router.facts.includes('10 Gbps'));
+  const phone = core.analyzeGenericFeatures('iPhone 15 256GB dual SIM con iCloud bloccato');
+  assert.equal(phone.category, 'Smartphone');
+  assert.ok(phone.facts.includes('256 GB memoria'));
+  assert.ok(phone.warnings.includes('Possibile blocco account'));
+});
+test('older generic results are enriched when they are restored', () => {
+  const restored = core.cleanResult({titolo:'NAS Synology 2 bay',details:'senza dischi',prezzo:280,url:'https://subito.it/informatica/nas-1.htm',platform:'SUBITO',
+    evalData:{stima:280,kind:'generic',gpuName:'Prodotto generico',tags:[{text:'Prezzo da confrontare',cls:'t-neutral'}]}});
+  assert.equal(restored.evalData.gpuName, 'NAS');
+  assert.ok(restored.evalData.tags.some(tag => tag.text === '2 bay'));
+  assert.ok(restored.evalData.tags.some(tag => tag.text === 'Senza dischi'));
+});

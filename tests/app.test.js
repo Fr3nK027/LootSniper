@@ -84,12 +84,26 @@ test('generic technology such as NAS and routers remains visible for manual comp
   const app = harness(); await app.run('initialSync');
   assert.equal(app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/456',title:'NAS Synology DS224+ 2 bay',price:280,updatedAt:Date.now()})"), true);
   assert.equal(app.run('bombsArray[0].evalData.kind'), 'generic');
+  assert.equal(app.run('bombsArray[0].evalData.gpuName'), 'NAS');
+  assert.match(app.run('cardTemplate(bombsArray[0])'), /2 bay/);
   assert.match(app.run('cardTemplate(bombsArray[0])'), /Valutazione manuale/);
   assert.match(app.run('cardTemplate(bombsArray[0])'), /card-offer/);
   assert.match(app.run('cardTemplate(bombsArray[0])'), /Vedi l’annuncio/);
   assert.equal(app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/789',title:'Alimentatore per NAS Synology',price:30,updatedAt:Date.now()})"), false);
   app.run('resetRadarResults()');
   assert.equal(app.run('bombsArray.length'), 0);
+});
+test('generic comparison uses categories and honest manual values', async () => {
+  const app = harness(); await app.run('initialSync');
+  app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/1',title:'NAS Synology 4 bay 8TB HDD',price:500,updatedAt:Date.now()})");
+  app.run("upsertListing({platform:'SUBITO',url:'https://subito.it/informatica/router-1.htm',title:'Router Wi-Fi 7 2.5 GbE',price:120,updatedAt:Date.now()})");
+  app.run('selectedForVersus = bombsArray.map(item => item.url); showComparison()');
+  const table = app.elements.get('comparison-content').innerHTML;
+  assert.match(table, /Tipo \/ componente/);
+  assert.match(table, /Dati rilevati/);
+  assert.match(table, /Confronto manuale/);
+  assert.match(table, /Non disponibile/);
+  assert.doesNotMatch(table, />GPU</);
 });
 test('product image, title and action all open the original listing safely', async () => {
   const app = harness(); await app.run('initialSync');

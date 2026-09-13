@@ -446,9 +446,11 @@ function updateCompareBar() {
 function showComparison() {
   const items = selectedForVersus.map(url => bombsArray.find(item => item.url === url)).filter(Boolean);
   if (items.length < 2) return;
-  const rows = [['Prezzo annuncio', item => euros.format(item.prezzo)], ['GPU', item => item.evalData.gpuName],
-    ['Indice hardware', item => item.evalData.vsScore + '/100'], ['Stima indicativa', item => euros.format(item.evalData.stima)],
-    ['Differenza stimata', item => euros.format(item.evalData.margine)], ['Marketplace', item => item.platform]];
+  const rows = [['Prezzo annuncio', item => euros.format(item.prezzo)], ['Tipo / componente', item => item.evalData.gpuName],
+    ['Dati rilevati', item => item.evalData.tags.filter(tag => tag.text !== 'Prezzo da confrontare').map(tag => tag.text).join(' · ') || 'Da verificare'],
+    ['Valutazione', item => item.evalData.kind === 'generic' ? 'Confronto manuale' : item.evalData.vsScore + '/100'],
+    ['Stima indicativa', item => item.evalData.kind === 'generic' ? 'Non disponibile' : euros.format(item.evalData.stima)],
+    ['Possibile differenza', item => item.evalData.kind === 'generic' ? 'Da confrontare' : euros.format(item.evalData.margine)], ['Marketplace', item => item.platform]];
   $('comparison-content').innerHTML = '<table><caption>Confronto degli annunci selezionati</caption><thead><tr><th scope="col">Caratteristica</th>' +
     items.map(item => '<th scope="col"><a href="' + escapeHtml(item.url) + '" target="_blank" rel="noopener noreferrer">' +
     escapeHtml(item.titolo) + ' ↗</a></th>').join('') + '</tr></thead><tbody>' + rows.map(([label, value]) =>
@@ -462,9 +464,10 @@ function upsertListing(item) {
   const price = parseMoney(item.price);
   const listingText = item.title + ' ' + (item.details || '');
   if (/\b(custodia|cover|scatola vuota|solo scatola|cerco|compro|alimentatore per|caricabatterie per)\b/i.test(listingText)) return false;
+  const generic = analyzeGenericFeatures(listingText);
   const evaluation = price && (analyzeHardware(listingText, price) || {
-    stima: price, margine: 0, gpuName: 'Prodotto generico', vsScore: 0, confidence: 0, kind: 'generic',
-    tags: [{ text: 'Prezzo da confrontare', cls: 't-neutral' }]
+    stima: price, margine: 0, gpuName: generic.category, vsScore: 0, confidence: 0, kind: 'generic',
+    tags: [{ text: 'Prezzo da confrontare', cls: 't-neutral' }, ...generic.tags]
   });
   if (!evaluation) return false;
   const previous = bombsArray.find(result => result.url === url);
