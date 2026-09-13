@@ -49,6 +49,7 @@ const SESSION_KEY = 'radar-session';
 const SEARCH_PROFILE_FORMAT = 'lootsniper-search';
 const SEARCH_PROFILE_VERSION = 1;
 const SORT_ORDERS = ['margin-desc', 'price-asc', 'price-desc', 'vs-desc', 'newest'];
+const PLATFORM_LABELS = { VINTED: 'Vinted', EBAY: 'eBay', SUBITO: 'Subito' };
 const CATEGORY_LABELS = { gaming: 'Portatili gaming', component: 'Componenti PC', nas: 'NAS', network: 'Router e rete', server: 'Server', smartphone: 'Smartphone', other: 'Altra elettronica' };
 
 function resetBrowserSession(session) {
@@ -344,6 +345,16 @@ function resultCategory(item) {
   if (item.evalData.kind !== 'generic') return 'gaming';
   return { 'Componente PC': 'component', NAS: 'nas', 'Router / rete': 'network', Server: 'server', Smartphone: 'smartphone' }[item.evalData.gpuName] || 'other';
 }
+function updatePlatformFilterCounts() {
+  const select = $('platform-filter');
+  const selected = Object.hasOwn(PLATFORM_LABELS, select.value) ? select.value : '';
+  const counts = Object.fromEntries(Object.keys(PLATFORM_LABELS).map(platform => [platform, 0]));
+  bombsArray.forEach(item => { if (Object.hasOwn(counts, item.platform)) counts[item.platform] += 1; });
+  select.innerHTML = '<option value="">Tutti (' + bombsArray.length + ')</option>' +
+    Object.entries(PLATFORM_LABELS).map(([platform, label]) => '<option value="' + platform + '">' +
+      label + ' (' + counts[platform] + ')</option>').join('');
+  select.value = selected;
+}
 function updateCategoryFilterCounts() {
   const select = $('category-filter');
   const selected = Object.hasOwn(CATEGORY_LABELS, select.value) ? select.value : '';
@@ -403,6 +414,7 @@ function clearActiveFilter(id) {
 }
 function renderAllCards() {
   const focusedUrl = document.activeElement?.dataset?.url;
+  updatePlatformFilterCounts();
   updateCategoryFilterCounts();
   const items = filteredItems();
   selectedForVersus = selectedForVersus.filter(url => bombsArray.some(item => item.url === url));
