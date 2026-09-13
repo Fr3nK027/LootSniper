@@ -143,6 +143,21 @@ test('catalog category filter separates product families', async () => {
   app.run('renderActiveFilters()');
   assert.match(app.elements.get('active-filters').innerHTML, /Categoria: NAS/);
 });
+test('category menu shows live product counts and preserves the selected category', async () => {
+  const app = harness(); await app.run('initialSync');
+  app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/1',title:'NAS Synology 4 bay',price:500,updatedAt:Date.now()})");
+  app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/2',title:'NAS QNAP 2 bay',price:250,updatedAt:Date.now()})");
+  app.run("upsertListing({platform:'SUBITO',url:'https://subito.it/informatica/router-1.htm',title:'Router Wi-Fi 7',price:120,updatedAt:Date.now()})");
+  app.elements.get('category-filter').value = 'nas';
+  app.run('renderAllCards()');
+  const options = app.elements.get('category-filter').innerHTML;
+  assert.match(options, /Tutte \(3\)/);
+  assert.match(options, /NAS \(2\)/);
+  assert.match(options, /Router e rete \(1\)/);
+  assert.match(options, /Smartphone \(0\)/);
+  assert.equal(app.elements.get('category-filter').value, 'nas');
+  assert.equal(app.run('filteredItems().length'), 2);
+});
 test('catalog view defaults to list and remembers the optional grid choice', async () => {
   const gridApp = harness({storage:{'radar-result-view':JSON.stringify('grid')}}); await gridApp.run('initialSync');
   assert.equal(gridApp.elements.get('results-grid').dataset.view, 'grid');

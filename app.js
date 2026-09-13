@@ -340,6 +340,16 @@ function resultCategory(item) {
   if (item.evalData.kind !== 'generic') return 'gaming';
   return { 'Componente PC': 'component', NAS: 'nas', 'Router / rete': 'network', Server: 'server', Smartphone: 'smartphone' }[item.evalData.gpuName] || 'other';
 }
+function updateCategoryFilterCounts() {
+  const select = $('category-filter');
+  const selected = Object.hasOwn(CATEGORY_LABELS, select.value) ? select.value : '';
+  const counts = Object.fromEntries(Object.keys(CATEGORY_LABELS).map(category => [category, 0]));
+  bombsArray.forEach(item => { counts[resultCategory(item)] += 1; });
+  select.innerHTML = '<option value="">Tutte (' + bombsArray.length + ')</option>' +
+    Object.entries(CATEGORY_LABELS).map(([category, label]) => '<option value="' + category + '">' +
+      escapeHtml(label) + ' (' + counts[category] + ')</option>').join('');
+  select.value = selected;
+}
 function filteredItems() {
   const query = normalizeListingText($('search-input').value);
   const maxPrice = Number($('max-price').value) || Infinity;
@@ -387,6 +397,7 @@ function clearActiveFilter(id) {
 }
 function renderAllCards() {
   const focusedUrl = document.activeElement?.dataset?.url;
+  updateCategoryFilterCounts();
   const items = filteredItems();
   selectedForVersus = selectedForVersus.filter(url => bombsArray.some(item => item.url === url));
   $('results-grid').innerHTML = items.length ? items.slice(0, renderedLimit).map(cardTemplate).join('') :
