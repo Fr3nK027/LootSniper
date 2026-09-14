@@ -41,6 +41,11 @@ test('wrong origin cannot submit listings',async()=>{
   const response=await bg.message({type:'radar-listings',platform:'EBAY',items:[]},{url:'https://evil.example',tab:{id:1}});
   assert.equal(response.ok,false);
 });
+test('international ebay links are accepted without weakening host validation',()=>{
+  const bg=harness();
+  assert.equal(bg.run("validSource('https://www.ebay.com/sch/i.html?_nkw=gaming+laptop&_udlo=1300&_udhi=2000','EBAY')"),true);
+  assert.equal(bg.run("validSource('https://fake-ebay.com/sch/i.html','EBAY')"),false);
+});
 test('explicit empty selection does not run every saved search',async()=>{
   const bg=harness({settings:{useAllSearches:false,selectedSearches:[],enabledPlatforms:['EBAY']}});
   await bg.run('runSavedSearches()');

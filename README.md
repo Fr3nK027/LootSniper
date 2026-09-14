@@ -66,7 +66,7 @@ Per la diagnostica con terminale visibile usa `python launcher.py` e chiudi con 
 
 1. Scegli come preparare i link:
    - **Automatico**: scrivi, per esempio, `NAS Synology economico`, `router Wi-Fi 7` oppure `laptop RTX 4070`. Premi **Genera i tre link dalla ricerca** oppure direttamente **Esegui ricerca**: LootSniper crea gli URL di Vinted, eBay e Subito.
-   - **Manuale**: esegui la ricerca sui marketplace, applica lì i filtri desiderati e incolla gli URL completi nei campi Vinted, eBay e Subito. Puoi lasciare vuoto un sito che non vuoi controllare.
+   - **Manuale**: esegui la ricerca sui marketplace, applica lì i filtri desiderati e incolla gli URL completi nei campi Vinted, eBay e Subito. Puoi lasciare vuoto un sito che non vuoi controllare. Per eBay sono accettati sia `ebay.it` sia `ebay.com`, compresi gli URL lunghi con filtri avanzati.
 2. In **Impostazioni → Ricerca** attiva **Più pagine** per leggere fino a 20 pagine per sito.
 3. Premi **Esegui ricerca** e segui il messaggio di stato. Il riquadro **Attività** contiene i dettagli tecnici.
 4. Per fermare il lavoro premi **Interrompi ricerca**: quanto raccolto rimane salvato.

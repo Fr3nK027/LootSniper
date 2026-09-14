@@ -1,12 +1,13 @@
 /* Shared listing extraction: used by the dashboard and the browser extension. */
 const RadarListings = (() => {
   const domains = { EBAY: 'ebay.it', VINTED: 'vinted.it', SUBITO: 'subito.it' };
+  const aliases = { EBAY: ['ebay.it', 'ebay.com'], VINTED: ['vinted.it'], SUBITO: ['subito.it'] };
   function resolve(value, base, platform) {
     if (!value) return '';
     try {
       const url = new URL(value, base);
       if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443')) return '';
-      if (platform && ![domains[platform], 'www.' + domains[platform]].includes(url.hostname)) return '';
+      if (platform && !aliases[platform].some(domain => url.hostname === domain || url.hostname === 'www.' + domain)) return '';
       return url.href;
     } catch { return ''; }
   }

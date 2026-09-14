@@ -125,11 +125,15 @@ function parseMoney(value) {
 }
 function extractPrices(text) { return parseMoney(text); }
 const MARKET_HOSTS = { VINTED: 'vinted.it', EBAY: 'ebay.it', SUBITO: 'subito.it' };
+const MARKET_HOST_ALIASES = { VINTED: ['vinted.it'], EBAY: ['ebay.it', 'ebay.com'], SUBITO: ['subito.it'] };
+function marketplaceHostAllowed(hostname, platform) {
+  return Array.isArray(MARKET_HOST_ALIASES[platform]) && MARKET_HOST_ALIASES[platform].some(domain => hostname === domain || hostname === 'www.' + domain);
+}
 function safeUrl(value, platform) {
   try {
     const url = new URL(value);
     if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443')) return '';
-    if (platform && ![MARKET_HOSTS[platform], 'www.' + MARKET_HOSTS[platform]].includes(url.hostname)) return '';
+    if (platform && !marketplaceHostAllowed(url.hostname, platform)) return '';
     return url.href;
   } catch { return ''; }
 }

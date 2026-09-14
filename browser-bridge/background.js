@@ -3,6 +3,7 @@ const API = 'http://127.0.0.1:8765';
 const AUTOMATION_ALARM = 'radar-automatic-search';
 const MAX_PAGES = 20;
 const HOSTS = { VINTED: 'vinted.it', EBAY: 'ebay.it', SUBITO: 'subito.it' };
+const HOST_ALIASES = { VINTED: ['vinted.it'], EBAY: ['ebay.it', 'ebay.com'], SUBITO: ['subito.it'] };
 let automationRunning = false;
 let stopRequested = false;
 let automationTabId = null;
@@ -27,7 +28,7 @@ function validSource(value, platform) {
   try {
     const url = new URL(value);
     return url.protocol === 'https:' && !url.username && !url.password && (!url.port || url.port === '443')
-      && [HOSTS[platform], 'www.' + HOSTS[platform]].includes(url.hostname);
+      && HOST_ALIASES[platform].some(domain => url.hostname === domain || url.hostname === 'www.' + domain);
   } catch { return false; }
 }
 function wait(milliseconds) { return new Promise(resolve => setTimeout(resolve, milliseconds)); }

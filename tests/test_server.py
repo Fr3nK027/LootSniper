@@ -197,8 +197,13 @@ class UtilityTests(unittest.TestCase):
             redirect.redirect_request(None, None, 302, "", {}, "http://127.0.0.1/private")
 
     def test_platform_url_validation(self):
+        filtered = ("https://www.ebay.com/sch/i.html?_dcat=177&_fsrp=1&_nkw=gaming+laptop"
+                    "&RAM%2520Size=64%2520GB%7C32%2520GB&_udlo=1300&_udhi=2000")
+        self.assertEqual(server.validate_url(filtered, "EBAY").hostname, "www.ebay.com")
         with self.assertRaises(ValueError):
             server.validate_url("https://vinted.it/catalog", "EBAY")
+        with self.assertRaises(ValueError):
+            server.validate_url("https://fake-ebay.com/sch/i.html", "EBAY")
 
 
 if __name__ == "__main__":

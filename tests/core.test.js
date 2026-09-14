@@ -18,6 +18,9 @@ test('canonical identities remove trackers, slug aliases and fragments', () => {
   assert.equal(core.canonicalUrl('javascript:alert(1)', 'EBAY'), '');
   assert.equal(core.canonicalUrl('https://evil.example/itm/123', 'EBAY'), '');
   assert.equal(core.safeUrl('https://user:pass@ebay.it/itm/1', 'EBAY'), '');
+  const filteredEbay = 'https://www.ebay.com/sch/i.html?_dcat=177&_fsrp=1&_nkw=gaming+laptop&RAM%2520Size=64%2520GB%7C32%2520GB&_udlo=1300&_udhi=2000';
+  assert.equal(core.safeUrl(filteredEbay, 'EBAY'), filteredEbay);
+  assert.equal(core.safeUrl('https://fake-ebay.com/sch/i.html?_nkw=laptop', 'EBAY'), '');
 });
 test('pagination starts at the supplied page and preserves filters', () => {
   const url = new URL(core.pageUrl('https://www.vinted.it/catalog?catalog[]=1&page=3#results', 'VINTED', 2));
@@ -25,6 +28,11 @@ test('pagination starts at the supplied page and preserves filters', () => {
   assert.equal(url.searchParams.get('catalog[]'), '1');
   assert.equal(url.hash, '#results');
   assert.equal(new URL(core.pageUrl('https://ebay.it/sch/i.html?_pgn=bad', 'EBAY', 1)).searchParams.get('_pgn'), '1');
+  const ebayCom = new URL(core.pageUrl('https://www.ebay.com/sch/i.html?_nkw=gaming+laptop&_udlo=1300&_udhi=2000', 'EBAY', 2));
+  assert.equal(ebayCom.hostname, 'www.ebay.com');
+  assert.equal(ebayCom.searchParams.get('_udlo'), '1300');
+  assert.equal(ebayCom.searchParams.get('_udhi'), '2000');
+  assert.equal(ebayCom.searchParams.get('_pgn'), '2');
 });
 test('hardware analysis avoids component and CPU false positives', () => {
   assert.ok(core.analyzeHardware('Laptop RTX 4070 32 GB RAM 1 TB SSD', 800));

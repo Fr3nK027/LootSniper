@@ -1,7 +1,7 @@
 'use strict';
 function collectListings() {
   const host = location.hostname.replace(/^www\./, '');
-  const platform = { 'ebay.it': 'EBAY', 'vinted.it': 'VINTED', 'subito.it': 'SUBITO' }[host];
+  const platform = { 'ebay.it': 'EBAY', 'ebay.com': 'EBAY', 'vinted.it': 'VINTED', 'subito.it': 'SUBITO' }[host];
   return { platform, items: RadarListings.collect(document, { platform, url: location.href }) };
 }
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

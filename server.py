@@ -22,11 +22,14 @@ ROOT = Path(__file__).resolve().parent
 SEARCHES_FILE = ROOT / "radar-searches.json"
 IMPORTS_FILE = ROOT / "radar-imports.json"
 PLATFORMS = {"VINTED": "vinted.it", "EBAY": "ebay.it", "SUBITO": "subito.it"}
-ALLOWED_HOSTS = {host for domain in PLATFORMS.values() for host in (domain, "www." + domain)}
+PLATFORM_DOMAINS = {"VINTED": {"vinted.it"}, "EBAY": {"ebay.it", "ebay.com"}, "SUBITO": {"subito.it"}}
+PLATFORM_HOSTS = {platform: {host for domain in domains for host in (domain, "www." + domain)}
+                  for platform, domains in PLATFORM_DOMAINS.items()}
+ALLOWED_HOSTS = set().union(*PLATFORM_HOSTS.values())
 STATIC_FILES = {"radar usato 3 market.html", "app.js", "styles.css", "radar-core.js", "radar-runtime.js", "browser-bridge/listings.js", "experience.css", "radar-guide.js", "theme.js", "assets/lootsniper.svg", "assets/lootsniper.ico"}
 WORKSPACE_ID = hashlib.sha256(str(ROOT).casefold().encode()).hexdigest()[:16]
 PORT = 8765
-VERSION = "7.8"
+VERSION = "7.9"
 CATEGORY_FILTERS = {"", "gaming", "component", "nas", "network", "server", "smartphone", "other"}
 MAX_BODY = 2 * 1024 * 1024
 MAX_HTML = 10 * 1024 * 1024
@@ -39,7 +42,7 @@ def validate_url(value, platform=None):
     if not isinstance(value, str) or len(value) > 8192:
         raise ValueError("URL non valido")
     parsed = urlparse(value.strip())
-    hosts = {PLATFORMS[platform], "www." + PLATFORMS[platform]} if platform else ALLOWED_HOSTS
+    hosts = PLATFORM_HOSTS[platform] if platform else ALLOWED_HOSTS
     if (parsed.scheme != "https" or parsed.hostname not in hosts or parsed.username
             or parsed.password or parsed.port not in (None, 443)):
         raise ValueError("Usa un link HTTPS del marketplace selezionato")
