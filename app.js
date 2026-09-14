@@ -372,7 +372,16 @@ function updateCategoryFilterCounts() {
       escapeHtml(label) + ' (' + counts[category] + ')</option>').join('');
   select.value = selected;
 }
+function priceRangeError() {
+  const minimum = $('min-price'), maximum = $('max-price');
+  const invalid = minimum.value !== '' && maximum.value !== '' && Number(minimum.value) > Number(maximum.value);
+  const message = invalid ? 'Il prezzo minimo non può superare il prezzo massimo.' : '';
+  minimum.setCustomValidity(message); maximum.setCustomValidity(message);
+  minimum.setAttribute('aria-invalid', String(invalid)); maximum.setAttribute('aria-invalid', String(invalid));
+  return message;
+}
 function filteredItems() {
+  if (priceRangeError()) return [];
   const query = normalizeListingText($('search-input').value);
   const minPrice = Number($('min-price').value) || 0;
   const maxPrice = Number($('max-price').value) || Infinity;
@@ -425,13 +434,22 @@ function renderAllCards() {
   const focusedUrl = document.activeElement?.dataset?.url;
   updatePlatformFilterCounts();
   updateCategoryFilterCounts();
+  const rangeError = priceRangeError();
   const items = filteredItems();
   selectedForVersus = selectedForVersus.filter(url => bombsArray.some(item => item.url === url));
+  const emptyTitle = rangeError
+    ? 'Controlla la fascia di prezzo'
+    : bombsArray.length
+      ? 'Nessun risultato con questi filtri'
+      : 'La tua prossima scoperta parte da qui';
+  const emptyText = rangeError || (bombsArray.length
+    ? 'Prova a cambiare il budget o a rimuovere un filtro.'
+    : 'Cerca un NAS, un router, un portatile o un altro prodotto tecnologico; puoi anche importare gli annunci con l’estensione.');
+  const emptyAction = bombsArray.length ? 'reset' : 'guide';
+  const emptyLabel = bombsArray.length ? 'Azzera i filtri' : 'Prepara la prima ricerca';
   $('results-grid').innerHTML = items.length ? items.slice(0, renderedLimit).map(cardTemplate).join('') :
-    '<div class="empty"><span class="empty-icon" aria-hidden="true">◎</span><h2>' +
-    (bombsArray.length ? 'Nessun risultato con questi filtri' : 'La tua prossima scoperta parte da qui') +
-    '</h2><p>' + (bombsArray.length ? 'Prova a cambiare il budget o a rimuovere un filtro.' :
-    'Cerca un NAS, un router, un portatile o un altro prodotto tecnologico; puoi anche importare gli annunci con l’estensione.') + '</p><button class="primary" data-empty-action="' + (bombsArray.length ? 'reset' : 'guide') + '">' + (bombsArray.length ? 'Azzera i filtri' : 'Prepara la prima ricerca') + '</button></div>';
+    '<div class="empty" role="status"><span class="empty-icon" aria-hidden="true">◎</span><h2>' + emptyTitle +
+    '</h2><p>' + emptyText + '</p><button class="primary" data-empty-action="' + emptyAction + '">' + emptyLabel + '</button></div>';
   $('count-bombs').textContent = bombsArray.length;
   $('count-scanned').textContent = totalAnalyzed;
   $('count-favorites').textContent = bombsArray.filter(item => favorites.has(item.url)).length;

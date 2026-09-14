@@ -110,6 +110,7 @@ L’elenco interno è condiviso con l’estensione soltanto durante la sessione 
 - Filtra per categoria: portatili gaming, componenti PC, NAS, router e rete, server, smartphone o altra elettronica. Il menu mostra quanti annunci sono presenti in ogni categoria.
 - Il menu Marketplace mostra quanti annunci arrivano da Vinted, eBay e Subito, così sai subito dove si concentra il catalogo.
 - Imposta un prezzo minimo e massimo per restringere il catalogo a una fascia precisa; entrambi vengono conservati nei file ricerca riutilizzabili.
+- Se il prezzo minimo supera il massimo, il catalogo indica subito come correggere la fascia invece di confonderla con una ricerca senza risultati.
 - Attiva **Solo con foto** quando vuoi escludere gli annunci senza immagine; anche questa scelta viene conservata nel file ricerca.
 - I filtri applicati compaiono sopra gli annunci: premi **×** su un singolo filtro per rimuoverlo senza perdere gli altri.
 - Premi la **stella** sulla scheda per salvarla nei preferiti.

@@ -14,13 +14,14 @@ function harness({storage = {}, searches = [], revision = 'v1', session = 'sessi
     return { value: '', checked: false, hidden: false, disabled: false, children: [], dataset: {},
       innerHTML: '', textContent: '', files: [], classList: {toggle(){}, add(){}, remove(){}},
       addEventListener(){}, setAttribute(){}, removeAttribute(){}, append(child){this.children.push(child);},
-      setCustomValidity(){}, reportValidity(){}, focus(){}, click(){ if (this.download) downloads.push({filename:this.download,url:this.href}); }, showModal(){}, close(){} };
+      setCustomValidity(message){this.validationMessage=message;}, reportValidity(){}, focus(){}, click(){ if (this.download) downloads.push({filename:this.download,url:this.href}); }, showModal(){}, close(){} };
   }
   class BrowserURL extends URL {}
   BrowserURL.createObjectURL = blob => { blobs.push(blob); return 'blob:lootsniper-' + blobs.length; };
   BrowserURL.revokeObjectURL = () => {};
   const context = vm.createContext({
     URL:BrowserURL, Blob, Intl, Date, AbortSignal, AbortController, console, Map, Set, Promise,
+    DOMParser: class { parseFromString() { return {}; } },
     setInterval(){}, setTimeout, location: {protocol:'http:'},
     document: { hidden: true, getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); },
       createElement: element, addEventListener(){} },
@@ -188,6 +189,22 @@ test('catalog price range applies both minimum and maximum limits', async () => 
   assert.match(app.elements.get('active-filters').innerHTML, /Da 200 €/);
   assert.match(app.elements.get('active-filters').innerHTML, /Fino a 500 €/);
 });
+test('an inverted price range explains the error instead of looking like an empty catalog', async () => {
+  const app = harness(); await app.run('initialSync');
+  app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/1',title:'NAS Synology 4 bay',price:350,updatedAt:Date.now()})");
+  app.elements.get('min-price').value = '700';
+  app.elements.get('max-price').value = '500';
+  app.run('renderAllCards()');
+  assert.equal(app.run('filteredItems().length'), 0);
+  assert.equal(app.elements.get('min-price').validationMessage, 'Il prezzo minimo non può superare il prezzo massimo.');
+  assert.match(app.elements.get('results-grid').innerHTML, /Controlla la fascia di prezzo/);
+  assert.match(app.elements.get('results-grid').innerHTML, /prezzo minimo non può superare il prezzo massimo/);
+  app.elements.get('min-price').value = '300';
+  app.elements.get('max-price').value = '800';
+  app.run('renderAllCards()');
+  assert.equal(app.elements.get('min-price').validationMessage, '');
+  assert.equal(app.run('filteredItems().length'), 1);
+});
 test('photo filter keeps only listings with an image and exposes a removable chip', async () => {
   const app = harness(); await app.run('initialSync');
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/1',title:'NAS Synology 2 bay',price:150,image:'https://images.example/nas.jpg',updatedAt:Date.now()})");
@@ -274,6 +291,21 @@ test('saving a generic electronics search downloads a reusable editable profile'
   assert.equal(profile.filters.category, 'nas');
   assert.equal(profile.filters.withPhoto, true);
   assert.equal(profile.filters.order, 'price-asc');
+});
+test('executing a query generates the marketplace links and renders collected results', async () => {
+  const app = harness(); await app.run('initialSync');
+  app.elements.get('market-query').value = 'RTX 4070';
+  app.run(`$('deep-scan').checked = false; quickQueryDirty = true;
+    extractListings = () => [{platform:'EBAY',url:'https://www.ebay.it/itm/987654321',title:'Laptop RTX 4070',price:'890 EUR',details:'32 GB RAM',updatedAt:Date.now()}];
+    api = async path => path.startsWith('/api/import/latest') ? {items:[],cursor:0} : {html:'<html></html>',hasNext:false};`);
+  await app.run('runScan()');
+  assert.equal(app.run('bombsArray.length'), 1);
+  assert.equal(app.run('bombsArray[0].titolo'), 'Laptop RTX 4070');
+  assert.match(app.elements.get('link-vinted').value, /RTX%204070/);
+  assert.match(app.elements.get('link-ebay').value, /RTX%204070/);
+  assert.match(app.elements.get('link-subito').value, /RTX%204070/);
+  assert.equal(app.elements.get('btn-scan').disabled, false);
+  assert.equal(app.elements.get('btn-text').textContent, 'Esegui ricerca');
 });
 test('an edited search profile restores query, custom URLs and filters', async () => {
   const app = harness(); await app.run('initialSync');
