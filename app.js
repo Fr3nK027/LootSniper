@@ -43,6 +43,7 @@ if (!undoArchive || !Array.isArray(undoArchive.results) || !Array.isArray(undoAr
 let renderedLimit = 60;
 let quickQueryDirty = false;
 let resultView = readStorage('radar-result-view', 'list') === 'grid' ? 'grid' : 'list';
+let linkMode = readStorage('radar-link-mode', 'auto') === 'manual' ? 'manual' : 'auto';
 const manualPlatforms = new Set();
 const FILTER_IDS = ['search-input', 'platform-filter', 'category-filter', 'sort-order', 'min-price', 'max-price', 'min-margin', 'with-photo-only', 'favorites-only'];
 const CHECKBOX_FILTERS = new Set(['with-photo-only', 'favorites-only']);
@@ -160,6 +161,20 @@ function renderSavedSearches() {
     '">▶</button><button class="saved-search-delete" data-search="' + index + '" aria-label="Elimina ' + escapeHtml(search.name) + '">×</button></div>').join('') :
     '<span class="saved-empty">Salva una ricerca: verrà creato anche il suo file riutilizzabile.</span>';
 }
+function setLinkMode(mode, announce = false) {
+  linkMode = mode === 'manual' ? 'manual' : 'auto';
+  $('source-mode-auto').checked = linkMode === 'auto';
+  $('source-mode-manual').checked = linkMode === 'manual';
+  $('auto-search-panel').hidden = linkMode === 'manual';
+  $('source-details').classList.toggle('manual-mode', linkMode === 'manual');
+  $('source-details-caption').textContent = linkMode === 'manual' ? 'Incolla i link trovati sui siti' : 'Controlla i link creati dall’app';
+  $('source-mode-help').textContent = linkMode === 'manual'
+    ? 'Incolla i link di ricerca dei marketplace. Puoi lasciare vuoto un sito che non vuoi controllare.'
+    : 'Scrivi cosa cerchi: i link di Vinted, eBay e Subito vengono creati automaticamente.';
+  if (linkMode === 'manual') $('source-details').open = true;
+  persist('radar-link-mode', linkMode);
+  if (announce) logMsg(linkMode === 'manual' ? 'Modalità manuale: incolla i link dei marketplace.' : 'Modalità automatica: scrivi il prodotto e LootSniper preparerà i tre link.', 'log-ok');
+}
 function loadSavedSearch(search) {
   for (const platform of Object.keys(MARKET_HOSTS)) $('link-' + platform.toLowerCase()).value = search[platform.toLowerCase()] || '';
   $('market-query').value = typeof search.query === 'string' ? search.query : '';
@@ -179,6 +194,8 @@ function loadSavedSearch(search) {
   Object.keys(MARKET_HOSTS).forEach(platform => {
     if (customPlatforms.includes(platform) || (!search.query && search[platform.toLowerCase()])) manualPlatforms.add(platform);
   });
+  const savedMode = search.linkMode === 'manual' || (search.linkMode !== 'auto' && manualPlatforms.size) ? 'manual' : 'auto';
+  setLinkMode(savedMode);
   updateSourceLinks(); persistFilters(); renderAllCards();
   logMsg('Ricerca “' + search.name + '” caricata.', 'log-ok');
 }
@@ -201,6 +218,7 @@ function prepareQuickQuery(query) {
   if (!clean) { $('market-query').focus(); return false; }
   $('market-query').value = clean;
   Object.keys(MARKET_HOSTS).forEach(platform => { $('link-' + platform.toLowerCase()).value = marketplaceSearchUrl(platform, clean); });
+  setLinkMode('auto');
   quickQueryDirty = false; manualPlatforms.clear();
   updateSourceLinks();
   logMsg('Ricerca pronta per “' + clean + '”. Puoi precisarla prima di avviarla.', 'log-ok');
@@ -208,10 +226,10 @@ function prepareQuickQuery(query) {
 }
 function getSources() {
   const query = $('market-query').value.trim();
+  if (linkMode === 'auto' && !query) return [];
   const sources = Object.keys(MARKET_HOSTS).map(platform => {
     const input = $('link-' + platform.toLowerCase());
-    const url = quickQueryDirty && query && !manualPlatforms.has(platform) ? marketplaceSearchUrl(platform, query) :
-      input.value.trim() || (query ? marketplaceSearchUrl(platform, query) : '');
+    const url = linkMode === 'auto' ? marketplaceSearchUrl(platform, query) : input.value.trim();
     input.setCustomValidity('');
     if (url && !safeUrl(url, platform)) {
       input.setCustomValidity('Inserisci un link HTTPS valido di ' + platform);
@@ -221,6 +239,8 @@ function getSources() {
     return { platform, url };
   }).filter(source => source.url);
   quickQueryDirty = false;
+  if (linkMode === 'auto') manualPlatforms.clear();
+  else { manualPlatforms.clear(); sources.forEach(source => manualPlatforms.add(source.platform)); }
   updateSourceLinks();
   return sources;
 }
@@ -240,9 +260,10 @@ function searchProfile(entry) {
   return {
     format: SEARCH_PROFILE_FORMAT,
     version: SEARCH_PROFILE_VERSION,
-    _help: 'Modifica query e filtri. Per ogni marketplace usa true, false oppure un URL HTTPS personalizzato.',
+    _help: 'sourceMode auto: usa true o false. sourceMode manual: incolla un URL HTTPS oppure usa false.',
     name: entry.name,
     query: entry.query || '',
+    sourceMode: entry.linkMode === 'manual' ? 'manual' : 'auto',
     marketplaces,
     filters: {
       minPrice: entry.minPrice ?? null,
@@ -267,6 +288,7 @@ function parseSearchProfile(data) {
   if (data.version !== SEARCH_PROFILE_VERSION) throw new Error('Versione del file ricerca non supportata.');
   if (typeof data.name !== 'string' || !data.name.trim() || data.name.trim().length > 80) throw new Error('Il nome deve contenere da 1 a 80 caratteri.');
   if (typeof data.query !== 'string' || data.query.length > 200) throw new Error('La query deve essere un testo di massimo 200 caratteri.');
+  if (data.sourceMode !== undefined && !['auto', 'manual'].includes(data.sourceMode)) throw new Error('sourceMode deve essere auto oppure manual.');
   if (!data.marketplaces || typeof data.marketplaces !== 'object' || Array.isArray(data.marketplaces)) throw new Error('Sezione marketplace non valida.');
   const query = data.query.trim(), entry = {name: data.name.trim(), query, vinted: '', ebay: '', subito: '', customPlatforms: []};
   for (const platform of Object.keys(MARKET_HOSTS)) {
@@ -283,6 +305,9 @@ function parseSearchProfile(data) {
     }
   }
   if (!Object.keys(MARKET_HOSTS).some(platform => entry[platform.toLowerCase()])) throw new Error('Attiva almeno un marketplace.');
+  entry.linkMode = data.sourceMode || (entry.customPlatforms.length ? 'manual' : 'auto');
+  if (entry.linkMode === 'manual' && !entry.customPlatforms.length) throw new Error('In modalità manuale inserisci almeno un URL completo nei marketplace.');
+  if (entry.linkMode === 'auto' && entry.customPlatforms.length) throw new Error('In modalità automatica usa true o false nei marketplace, senza URL manuali.');
   const filters = data.filters === undefined ? {} : data.filters;
   if (!filters || typeof filters !== 'object' || Array.isArray(filters)) throw new Error('Sezione filtri non valida.');
   entry.minPrice = optionalProfileNumber(filters.minPrice, 'Il prezzo minimo');
@@ -331,8 +356,8 @@ async function saveSearch() {
   if (!sources.length) { setScanState('Da dove partiamo?', 'Scrivi cosa cerchi nel campo a sinistra, per esempio laptop RTX 4070.'); logMsg('Inserisci una parola chiave o un link.', 'log-warn'); return; }
   let entry;
   try {
-    entry = { name, query: $('market-query').value.trim().slice(0, 200), vinted: '', ebay: '', subito: '',
-      customPlatforms: [...manualPlatforms], minPrice: optionalProfileNumber($('min-price').value, 'Il prezzo minimo'),
+    entry = { name, query: $('market-query').value.trim().slice(0, 200), linkMode, vinted: '', ebay: '', subito: '',
+      customPlatforms: linkMode === 'manual' ? sources.map(source => source.platform) : [], minPrice: optionalProfileNumber($('min-price').value, 'Il prezzo minimo'),
       maxPrice: optionalProfileNumber($('max-price').value, 'Il budget massimo'),
       minMargin: optionalProfileNumber($('min-margin').value, 'La differenza minima'), platformFilter: $('platform-filter').value,
       categoryFilter: $('category-filter').value,
@@ -779,12 +804,14 @@ $('btn-restore-searches').addEventListener('click', async () => {
 $('search-name').addEventListener('keydown', event => { if (event.key === 'Enter') saveSearch(); });
 $('market-query').addEventListener('keydown', event => { if (event.key === 'Enter') runScan(); });
 $('market-query').addEventListener('input', () => { quickQueryDirty = true; manualPlatforms.clear(); });
+$('source-mode-auto').addEventListener('change', () => { if ($('source-mode-auto').checked) setLinkMode('auto', true); });
+$('source-mode-manual').addEventListener('change', () => { if ($('source-mode-manual').checked) setLinkMode('manual', true); });
 $('quick-searches').addEventListener('click', event => {
   const query = event.target && event.target.dataset ? event.target.dataset.query : '';
   if (query) prepareQuickQuery(query);
 });
 Object.keys(MARKET_HOSTS).forEach(platform => $('link-' + platform.toLowerCase()).addEventListener('input', () => {
-  manualPlatforms.add(platform); $('link-' + platform.toLowerCase()).setCustomValidity('');
+  setLinkMode('manual'); manualPlatforms.add(platform); $('link-' + platform.toLowerCase()).setCustomValidity('');
   updateSourceLinks();
 }));
 $('btn-generate-links').addEventListener('click', () => {
@@ -809,7 +836,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) impo
 async function initializeApp() {
   try { await initializeSession(); }
   catch (error) { logMsg(error.message, 'log-warn'); }
-  restoreFilters(); applyResultView(); renderAllCards(); renderSavedSearches();
+  restoreFilters(); setLinkMode(linkMode); applyResultView(); renderAllCards(); renderSavedSearches();
   if (storageWarning) logMsg('Un archivio locale non è leggibile. Il dato originale è stato conservato.', 'log-warn');
   await initializeSearches();
 }

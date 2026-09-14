@@ -1,4 +1,4 @@
-/* LootSniper 7.7 — accessible catalog facets and validated price ranges. */
+/* LootSniper 7.8 — explicit automatic or manual marketplace link setup. */
 :root,
 :root[data-theme="light"] {
   --bg: #f5f7f8;
@@ -133,6 +133,20 @@ select {
   border-color: var(--accent);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent);
 }
+.source-mode { min-width: 0; margin: 0; padding: 0; border: 0; }
+.source-mode legend { margin-bottom: 9px; color: var(--text); font: 700 11px/1.25 inherit; letter-spacing: .055em; text-transform: uppercase; }
+.source-mode-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.source-mode-options label { position: relative; cursor: pointer; }
+.source-mode-options input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.source-mode-options span { display: grid; gap: 3px; min-height: 76px; padding: 12px; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 13px; transition: border-color .16s ease, background-color .16s ease, box-shadow .16s ease; }
+.source-mode-options strong { font-size: 12px; }
+.source-mode-options small { color: var(--muted); font-size: 10px; line-height: 1.4; }
+.source-mode-options input:checked + span { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent); }
+.source-mode-options input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.source-mode #source-mode-help { margin: 9px 2px 0; }
+#auto-search-panel { display: grid; gap: 13px; }
+#auto-search-panel[hidden] { display: none; }
+.source-details.manual-mode { padding: 14px; background: var(--subtle); border: 1px solid var(--line); border-radius: 13px; }
 .source-details, .activity { border-top: 1px solid var(--line); padding-top: 14px; }
 .quick-searches { display: grid; gap: 8px; }
 .quick-searches > span { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .045em; }

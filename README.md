@@ -32,7 +32,7 @@ Windows può mostrare un avviso perché lo script non è firmato digitalmente. V
 
 ## Primo avvio
 
-La prima apertura mostra una guida in tre passaggi. Inserisci cosa cerchi e, se vuoi, il budget: LootSniper prepara automaticamente i link per Vinted, eBay e Subito. La guida rimane sempre disponibile con **Guida rapida**.
+La prima apertura mostra una guida in tre passaggi. Puoi scegliere **Automatico**, scrivere cosa cerchi e lasciare che LootSniper prepari i link, oppure **Manuale** e incollare gli indirizzi delle ricerche configurate direttamente su Vinted, eBay e Subito. La guida rimane sempre disponibile con **Guida rapida**.
 
 Il pulsante **Giorno / Notte** accanto al logo cambia l’aspetto della dashboard e ricorda la scelta. Al primo avvio LootSniper segue automaticamente il tema di Windows.
 
@@ -64,13 +64,12 @@ Per la diagnostica con terminale visibile usa `python launcher.py` e chiudi con 
 
 ## Esegui una ricerca
 
-1. Nel campo **Cosa stai cercando?** scrivi, per esempio, `NAS Synology economico`, `router Wi-Fi 7` oppure `laptop RTX 4070`.
-2. Premi **Genera i tre link dalla ricerca**.
-3. Se vuoi filtri specifici, apri il marketplace, imposta i filtri sul sito e copia l’URL nel campo Vinted, eBay o Subito corrispondente.
-4. Lascia vuoti i campi delle piattaforme che non vuoi interrogare. Se cambi nuovamente la ricerca rapida, i link possono essere rigenerati.
-5. In **Impostazioni → Ricerca** attiva **Più pagine** per leggere fino a 20 pagine per sito.
-6. Premi **Esegui ricerca** e segui il messaggio di stato. Il riquadro **Attività** contiene i dettagli tecnici.
-7. Per fermare il lavoro premi **Interrompi ricerca**: quanto raccolto rimane salvato.
+1. Scegli come preparare i link:
+   - **Automatico**: scrivi, per esempio, `NAS Synology economico`, `router Wi-Fi 7` oppure `laptop RTX 4070`. Premi **Genera i tre link dalla ricerca** oppure direttamente **Esegui ricerca**: LootSniper crea gli URL di Vinted, eBay e Subito.
+   - **Manuale**: esegui la ricerca sui marketplace, applica lì i filtri desiderati e incolla gli URL completi nei campi Vinted, eBay e Subito. Puoi lasciare vuoto un sito che non vuoi controllare.
+2. In **Impostazioni → Ricerca** attiva **Più pagine** per leggere fino a 20 pagine per sito.
+3. Premi **Esegui ricerca** e segui il messaggio di stato. Il riquadro **Attività** contiene i dettagli tecnici.
+4. Per fermare il lavoro premi **Interrompi ricerca**: quanto raccolto rimane salvato.
 
 Ogni volta che premi **Esegui ricerca**, LootSniper svuota il radar precedente e riparte da zero. Anche un nuovo avvio azzera annunci, preferiti, filtri, importazioni e l’elenco temporaneo delle ricerche. Tema, configurazione Discord e file ricerca già scaricati rimangono disponibili.
 
@@ -89,9 +88,9 @@ Alcuni marketplace possono bloccare la lettura diretta o caricare gli annunci so
 5. Durante la sessione premi il nome per ricaricare la ricerca, **▶** per eseguirla o **×** per rimuoverla dall’elenco.
 6. In futuro premi **Importa file ricerca**, scegli il JSON e controlla i dati caricati. Premi **Esegui ricerca** per avviarla.
 
-Il file conserva nome, parole chiave, marketplace, eventuali URL personalizzati, budget, filtri, ordinamento e profondità della scansione. Non contiene risultati, preferiti o webhook Discord. Puoi conservarlo in qualsiasi cartella, inviarlo a un altro PC con LootSniper o modificarlo con Blocco note.
+Il file conserva nome, parole chiave, modalità automatica o manuale, marketplace, eventuali URL incollati, budget, filtri, ordinamento e profondità della scansione. Non contiene risultati, preferiti o webhook Discord. Puoi conservarlo in qualsiasi cartella, inviarlo a un altro PC con LootSniper o modificarlo con Blocco note.
 
-Nel JSON, modifica liberamente `name`, `query`, `filters` e `deepScan`. Dentro `marketplaces` usa:
+Nel JSON, `sourceMode` può essere `auto` oppure `manual`. Modifica liberamente `name`, `query`, `filters` e `deepScan`. In modalità automatica usa `true` o `false` dentro `marketplaces`; in modalità manuale usa un URL completo oppure `false`:
 
 - `true` per creare automaticamente il link del marketplace dalla nuova `query`;
 - `false` per escludere quel marketplace;

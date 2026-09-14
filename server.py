@@ -26,7 +26,7 @@ ALLOWED_HOSTS = {host for domain in PLATFORMS.values() for host in (domain, "www
 STATIC_FILES = {"radar usato 3 market.html", "app.js", "styles.css", "radar-core.js", "radar-runtime.js", "browser-bridge/listings.js", "experience.css", "radar-guide.js", "theme.js", "assets/lootsniper.svg", "assets/lootsniper.ico"}
 WORKSPACE_ID = hashlib.sha256(str(ROOT).casefold().encode()).hexdigest()[:16]
 PORT = 8765
-VERSION = "7.7"
+VERSION = "7.8"
 CATEGORY_FILTERS = {"", "gaming", "component", "nas", "network", "server", "smartphone", "other"}
 MAX_BODY = 2 * 1024 * 1024
 MAX_HTML = 10 * 1024 * 1024
@@ -106,7 +106,11 @@ def clean_searches(searches):
         custom_platforms = item.get("customPlatforms", [])
         if (not isinstance(custom_platforms, list) or any(value not in PLATFORMS for value in custom_platforms)):
             raise ValueError("Marketplace personalizzati non validi")
-        entry = {"name": name, "query": query.strip(), "customPlatforms": list(dict.fromkeys(custom_platforms)),
+        link_mode = item.get("linkMode", "manual" if custom_platforms else "auto")
+        if link_mode not in {"auto", "manual"}:
+            raise ValueError("Modalità link non valida")
+        entry = {"name": name, "query": query.strip(), "linkMode": link_mode,
+                 "customPlatforms": list(dict.fromkeys(custom_platforms)),
                  "updatedAt": str(item.get("updatedAt", ""))[:40]}
         for platform in PLATFORMS:
             value = item.get(platform.lower(), "")

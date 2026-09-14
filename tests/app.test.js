@@ -250,15 +250,20 @@ test('price history records changes and survives backup normalization', async ()
   assert.equal(app.run('cleanResult(bombsArray[0]).priceHistory[0].price'), 900);
   assert.match(app.run('cardTemplate(bombsArray[0])'), /price-drop/);
 });
-test('a new quick query replaces stale generated links but respects manual overrides', async () => {
+test('the user explicitly chooses automatic generation or manually pasted links', async () => {
   const app = harness(); await app.run('initialSync');
   app.elements.get('market-query').value='RTX 4080';
   app.elements.get('link-ebay').value='https://www.ebay.it/sch/i.html?_nkw=old';
   app.run('quickQueryDirty = true');
   assert.match(app.run('getSources()[1].url'), /RTX%204080/);
+  app.run("setLinkMode('manual'); ['vinted','ebay','subito'].forEach(key => $('link-' + key).value = '')");
   app.elements.get('link-ebay').value='https://www.ebay.it/sch/i.html?_nkw=custom';
-  app.run("quickQueryDirty = true; manualPlatforms.add('EBAY')");
-  assert.match(app.run('getSources()[1].url'), /custom/);
+  assert.equal(app.run('getSources().length'), 1);
+  assert.match(app.run('getSources()[0].url'), /custom/);
+  assert.equal(app.elements.get('auto-search-panel').hidden, true);
+  app.run("setLinkMode('auto')");
+  assert.equal(app.run('getSources().length'), 3);
+  assert.equal(app.elements.get('auto-search-panel').hidden, false);
 });
 test('category shortcuts prepare an editable search on every marketplace', async () => {
   const app = harness(); await app.run('initialSync');
@@ -285,12 +290,27 @@ test('saving a generic electronics search downloads a reusable editable profile'
   const profile = JSON.parse(await app.blobs[0].text());
   assert.equal(profile.format, 'lootsniper-search');
   assert.equal(profile.query, 'NAS Synology 4 bay');
+  assert.equal(profile.sourceMode, 'auto');
   assert.equal(profile.marketplaces.ebay, true);
   assert.equal(profile.filters.minPrice, 150);
   assert.equal(profile.filters.maxPrice, 450);
   assert.equal(profile.filters.category, 'nas');
   assert.equal(profile.filters.withPhoto, true);
   assert.equal(profile.filters.order, 'price-asc');
+});
+test('a manual search keeps pasted links in its reusable file and restores manual mode', async () => {
+  const app = harness(); await app.run('initialSync');
+  app.elements.get('search-name').value = 'Router con filtri manuali';
+  app.run("setLinkMode('manual'); $('link-ebay').value = 'https://www.ebay.it/sch/i.html?_nkw=router&_udhi=120'; $('deep-scan').checked = false");
+  await app.run('saveSearch()');
+  await app.run('saveQueue');
+  const profile = JSON.parse(await app.blobs[0].text());
+  assert.equal(profile.sourceMode, 'manual');
+  assert.match(profile.marketplaces.ebay, /_udhi=120/);
+  assert.equal(profile.marketplaces.vinted, false);
+  assert.equal(app.run('savedSearches[0].linkMode'), 'manual');
+  app.run("setLinkMode('auto'); loadSavedSearch(savedSearches[0])");
+  assert.equal(app.elements.get('source-mode-manual').checked, true);
 });
 test('executing a query generates the marketplace links and renders collected results', async () => {
   const app = harness(); await app.run('initialSync');
@@ -324,6 +344,7 @@ test('an edited search profile restores query, custom URLs and filters', async (
   assert.equal(app.elements.get('category-filter').value, 'smartphone');
   assert.equal(app.elements.get('with-photo-only').checked, true);
   assert.equal(app.elements.get('deep-scan').checked, false);
+  assert.equal(app.elements.get('source-mode-manual').checked, true);
 });
 test('legacy result-array backups merge duplicates and reject unsupported versions', async () => {
   const app = harness(); await app.run('initialSync');

@@ -95,10 +95,11 @@ class RadarApiTests(unittest.TestCase):
         search = {"name": "NAS economici", "query": "NAS Synology 4 bay", "ebay": "https://www.ebay.it/sch/i.html?_nkw=nas",
                   "vinted": "", "subito": "", "customPlatforms": ["EBAY"], "minPrice": 150, "maxPrice": 450,
                   "minMargin": None, "platformFilter": "EBAY", "categoryFilter": "nas", "sortOrder": "price-asc",
-                  "resultQuery": "4 bay", "deepScan": False, "withPhotoOnly": True}
+                  "resultQuery": "4 bay", "deepScan": False, "withPhotoOnly": True, "linkMode": "manual"}
         clean = server.clean_searches([search])[0]
         self.assertEqual(clean["query"], "NAS Synology 4 bay")
         self.assertEqual(clean["customPlatforms"], ["EBAY"])
+        self.assertEqual(clean["linkMode"], "manual")
         self.assertEqual(clean["minPrice"], 150)
         self.assertEqual(clean["maxPrice"], 450)
         self.assertEqual(clean["categoryFilter"], "nas")
@@ -107,7 +108,7 @@ class RadarApiTests(unittest.TestCase):
         self.assertFalse(clean["deepScan"])
         for invalid in ({**search, "minPrice": -1}, {**search, "maxPrice": float("nan")}, {**search, "deepScan": "false"},
                         {**search, "withPhotoOnly": "true"}, {**search, "categoryFilter": "televisori"},
-                        {**search, "customPlatforms": ["UNKNOWN"]}):
+                        {**search, "customPlatforms": ["UNKNOWN"]}, {**search, "linkMode": "mixed"}):
             with self.assertRaises(ValueError):
                 server.clean_searches([invalid])
 
