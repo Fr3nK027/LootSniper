@@ -40,9 +40,64 @@ function listingCondition(value) {
   if (/\b(rotto|da riparare|per parti|per ricambi|non funzionante|non si accende|schermo rotto)\b/.test(text)) return { key: 'repair', label: 'Da riparare', adjustment: -30 };
   if (/(?<!senza )(graffi|ammaccatura|segni evidenti|crepa|rovinato|usurato)\b/.test(text)) return { key: 'worn', label: 'Usato con usura', adjustment: -10 };
   if (/\b(nuovo|sigillato|imballato|mai acceso|mai aperto)\b/.test(text)) return { key: 'new', label: 'Nuovo / sigillato', adjustment: 8 };
-  if (/\b(ottime condizioni|ottimo stato|come nuovo|perfette condizioni|usato garantito|ricondizionato)\b/.test(text)) return { key: 'good', label: 'Buone condizioni dichiarate', adjustment: 5 };
+  if (/\b(ricondizionato|refurbished|usato garantito)\b/.test(text)) return { key: 'refurbished', label: 'Ricondizionato', adjustment: 5 };
+  if (/\b(ottime condizioni|ottimo stato|come nuovo|perfette condizioni)\b/.test(text)) return { key: 'good', label: 'Buone condizioni dichiarate', adjustment: 5 };
   if (/\b(usato|seconda mano)\b/.test(text)) return { key: 'used', label: 'Usato', adjustment: 0 };
   return { key: 'unknown', label: 'Condizioni non indicate', adjustment: 0 };
+}
+function listingFacets(value) {
+  const signals = listingSignals(value), text = signals.text;
+  const usage = [];
+  if (/\b(gaming|gamer|rog|alienware|predator|legion|omen|nitro)\b/.test(text)) usage.push('gaming');
+  if (/\b(workstation|thinkpad p\d|precision|zbook|quadro|rtx a\d{3,4})\b/.test(text)) usage.push('workstation');
+  if (/\b(ai hosting|hosting ai|gpu server|server ai|llm|machine learning)\b/.test(text)) usage.push('ai');
+  if (/\b(nas|synology|qnap|asustor|terramaster)\b/.test(text)) usage.push('nas');
+  if (/\b(server|poweredge|proliant|thinksystem|xeon|epyc)\b/.test(text)) usage.push('server');
+  if (/\b(smartphone|telefono|cellulare|iphone|galaxy|pixel)\b/.test(text)) usage.push('smartphone');
+  if (/\b(router|modem|access point|wi-?fi mesh)\b/.test(text)) usage.push('network');
+  if (/\b(scheda video|gpu|processore|cpu|memoria ram|ssd|nvme)\b/.test(text) && !/\b(laptop|notebook|portatile)\b/.test(text)) usage.push('component');
+  const portable = /\b(laptop|notebook|portatile)\b/.test(text);
+  const gamingGpu = /\b(?:rtx\s*(?:20|30|40|50)\d{2}|(?:rx|radeon)\s*[679]\d{3})\b/.test(text);
+  if (portable && gamingGpu && !usage.includes('workstation')) usage.push('gaming');
+  const storageType = [];
+  if (/\bnvme\b/.test(text)) storageType.push('nvme');
+  if (/\bssd\b/.test(text)) storageType.push('ssd');
+  if (/\bhdd|hard disk|disco rigido\b/.test(text)) storageType.push('hdd');
+  if (!storageType.length) storageType.push('unknown');
+  const ramGeneration = /\bddr5\b/.test(text) ? ['ddr5'] : /\bddr4\b/.test(text) ? ['ddr4'] : ['unknown'];
+  const ramAmount = signals.ramGB ? [String(signals.ramGB)] : ['unknown'];
+  const cpuFamily = [];
+  for (const [pattern, key] of [[/\b(?:intel )?(?:core )?i5\b/, 'i5'], [/\b(?:intel )?(?:core )?i7\b/, 'i7'], [/\b(?:intel )?(?:core )?i9\b/, 'i9'],
+    [/\bryzen\s*5\b/, 'ryzen5'], [/\bryzen\s*7\b/, 'ryzen7'], [/\b(?:ryzen\s*9|ryzen ai 9)\b/, 'ryzen9'],
+    [/\bthreadripper\b/, 'threadripper'], [/\bxeon\b/, 'xeon'], [/\bepyc\b/, 'epyc'],
+    [/\b(?:core )?ultra\s*5\b/, 'ultra5'], [/\b(?:core )?ultra\s*7\b/, 'ultra7'], [/\b(?:core )?ultra\s*9\b/, 'ultra9'],
+    [/\bapple\s*m[1-4]|\bm[1-4]\s*(?:pro|max|ultra)\b/, 'applem'], [/\bsnapdragon\s*x\b/, 'snapdragon']]) if (pattern.test(text)) cpuFamily.push(key);
+  if (!cpuFamily.length) cpuFamily.push('unknown');
+  const cpuGeneration = [];
+  const intelModel = text.match(/\bi[3579][ -]?(10|11|12|13|14)\d{3}[a-z]{0,2}\b/);
+  const intelNamed = text.match(/\b(10|11|12|13|14)(?:a|ª|th|st|nd|rd)?\s*(?:gen|generazione)\b/);
+  if (intelModel || intelNamed) cpuGeneration.push('intel' + (intelModel?.[1] || intelNamed?.[1]));
+  if (/\bcore ultra|\bultra\s*[579]\b/.test(text)) cpuGeneration.push('coreultra');
+  const ryzenModel = text.match(/\bryzen(?: ai)?\s*[3579]\s*(3|4|5|6|7|8|9)\d{3}/);
+  if (ryzenModel) cpuGeneration.push('ryzen' + ryzenModel[1] + '000');
+  if (/\bryzen ai\s*(?:300|3\d{2})\b/.test(text)) cpuGeneration.push('ryzenai300');
+  if (!cpuGeneration.length) cpuGeneration.push('unknown');
+  const gpuSeries = [];
+  for (const [pattern, key] of [[/\brtx\s*20\d{2}/, 'rtx20'], [/\brtx\s*30\d{2}/, 'rtx30'], [/\brtx\s*40\d{2}/, 'rtx40'], [/\brtx\s*50\d{2}/, 'rtx50'],
+    [/\b(?:rx|radeon)\s*6\d{3}/, 'rx6000'], [/\b(?:rx|radeon)\s*7\d{3}/, 'rx7000'], [/\b(?:rx|radeon)\s*9\d{3}/, 'rx9000'],
+    [/\b(?:rtx\s*[a]\d{3,4}|rtx pro|quadro)\b/, 'nvidiaPro'], [/\bradeon pro\b/, 'radeonPro'],
+    [/\bintel arc\b|\barc\s*[ab]\d{3}/, 'arc'], [/\b(iris xe|radeon graphics|grafica integrata|integrated graphics)\b/, 'integrated']]) if (pattern.test(text)) gpuSeries.push(key);
+  if (!gpuSeries.length) gpuSeries.push('unknown');
+  const brands = { asus:/\basus|rog\b/, acer:/\bacer\b/, lenovo:/\blenovo|thinkpad|legion\b/, hp:/\bhp\b|hewlett/, dell:/\bdell|alienware\b/, msi:/\bmsi\b/, razer:/\brazer\b/, apple:/\bapple|macbook\b/, framework:/\bframework\b/, gigabyte:/\bgigabyte|aorus\b/ };
+  const brand = Object.entries(brands).filter(([, pattern]) => pattern.test(text)).map(([key]) => key);
+  if (!brand.length) brand.push('other');
+  const keyboard = [];
+  for (const [pattern, key] of [[/\b(tastiera|layout|keyboard)\s*(?:italiana|italiano|it)\b|\bqwerty it\b/, 'it'], [/\b(tastiera|layout|keyboard)\s*(?:usa|us|americana)\b/, 'us'],
+    [/\b(tastiera|layout|keyboard)\s*(?:uk|britannica)\b/, 'uk'], [/\b(tastiera|layout|keyboard)\s*(?:de|tedesca)\b|\bqwertz\b/, 'de'],
+    [/\b(tastiera|layout|keyboard)\s*(?:es|spagnola)\b/, 'es'], [/\b(tastiera|layout|keyboard)\s*(?:fr|francese)\b|\bazerty\b/, 'fr']]) if (pattern.test(text)) keyboard.push(key);
+  if (!keyboard.length) keyboard.push('unknown');
+  return { usage: usage.length ? usage : ['other'], storageType, ramGeneration, ramAmount, cpuFamily, cpuGeneration,
+    gpuSeries, brand, condition: [listingCondition(text).key], keyboard };
 }
 function classifyOpportunity(evaluation, price, value) {
   const condition = listingCondition(value);
@@ -239,4 +294,4 @@ function validTimestamp(value) {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 && number <= Date.now() + 86400000 ? number : Date.now();
 }
-if (typeof module !== 'undefined') module.exports = { explainListing, analyzeGenericFeatures, listingSignals, listingCondition, classifyOpportunity, parseMoney, extractPrices, analyzeHardware, normalizeListingText, safeUrl, canonicalUrl, pageUrl, escapeHtml, cleanResult };
+if (typeof module !== 'undefined') module.exports = { explainListing, analyzeGenericFeatures, listingSignals, listingCondition, listingFacets, classifyOpportunity, parseMoney, extractPrices, analyzeHardware, normalizeListingText, safeUrl, canonicalUrl, pageUrl, escapeHtml, cleanResult };

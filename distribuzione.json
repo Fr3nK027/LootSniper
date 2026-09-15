@@ -1,5 +1,5 @@
 {
-  "version": "8.0",
+  "version": "8.1",
   "files": [
     ".gitignore",
     "README.md",
@@ -45,6 +45,7 @@
     "tests/app.test.js",
     "tests/extension.test.js",
     "tests/theme.test.js",
+    "tests/markup.test.js",
     "tests/preview_server.py",
     "tests/listings.html",
     "tests/test_distribution.py",

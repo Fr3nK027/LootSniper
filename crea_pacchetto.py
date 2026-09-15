@@ -13,7 +13,7 @@ FILES = [
     'browser-bridge/content.js', 'browser-bridge/listings.js', 'browser-bridge/popup.html', 'browser-bridge/popup.js',
     'docs/images/avvio.svg', 'docs/images/estensione.svg', 'docs/images/dashboard.png', 'docs/images/dashboard-notte.png', 'docs/images/confronto.png', 'docs/images/discord.png', 'docs/images/guida.png',
     'tests/test_server.py', 'tests/test_launcher.py', 'tests/core.test.js', 'tests/app.test.js',
-    'tests/extension.test.js', 'tests/theme.test.js', 'tests/preview_server.py', 'tests/listings.html', 'tests/test_distribution.py', 'tests/test_runtime.py', 'tests/test_hidden_start.py', 'tests/test_uninstaller.py'
+    'tests/extension.test.js', 'tests/theme.test.js', 'tests/markup.test.js', 'tests/preview_server.py', 'tests/listings.html', 'tests/test_distribution.py', 'tests/test_runtime.py', 'tests/test_hidden_start.py', 'tests/test_uninstaller.py'
 ]
 
 def main():

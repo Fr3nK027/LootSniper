@@ -96,7 +96,8 @@ class RadarApiTests(unittest.TestCase):
                   "vinted": "", "subito": "", "customPlatforms": ["EBAY"], "minPrice": 150, "maxPrice": 450,
                   "minMargin": None, "platformFilter": "EBAY", "categoryFilter": "nas", "sortOrder": "price-asc",
                   "resultQuery": "4 bay", "deepScan": False, "withPhotoOnly": True, "linkMode": "manual",
-                  "resultScope": "all", "featureFilters": {"storage1tb": "include", "repair": "exclude"}}
+                  "resultScope": "all", "featureFilters": {"storage1tb": "include", "repair": "exclude"},
+                  "primaryIntent": "nas", "guidedFilters": {"usage": ["nas"], "storageType": ["hdd", "unknown"]}}
         clean = server.clean_searches([search])[0]
         self.assertEqual(clean["query"], "NAS Synology 4 bay")
         self.assertEqual(clean["customPlatforms"], ["EBAY"])
@@ -108,12 +109,16 @@ class RadarApiTests(unittest.TestCase):
         self.assertTrue(clean["withPhotoOnly"])
         self.assertEqual(clean["resultScope"], "all")
         self.assertEqual(clean["featureFilters"], {"storage1tb": "include", "repair": "exclude"})
+        self.assertEqual(clean["primaryIntent"], "nas")
+        self.assertEqual(clean["guidedFilters"], {"usage": ["nas"], "storageType": ["hdd", "unknown"]})
         self.assertFalse(clean["deepScan"])
         for invalid in ({**search, "minPrice": -1}, {**search, "maxPrice": float("nan")}, {**search, "deepScan": "false"},
                         {**search, "withPhotoOnly": "true"}, {**search, "categoryFilter": "televisori"},
                         {**search, "customPlatforms": ["UNKNOWN"]}, {**search, "linkMode": "mixed"},
                         {**search, "resultScope": "maybe"}, {**search, "featureFilters": {"unknown": "include"}},
-                        {**search, "featureFilters": {"ram": "maybe"}}):
+                        {**search, "featureFilters": {"ram": "maybe"}}, {**search, "primaryIntent": "televisori"},
+                        {**search, "guidedFilters": {"gpuSeries": ["rtx60"]}},
+                        {**search, "guidedFilters": {"ramAmount": "32"}}):
             with self.assertRaises(ValueError):
                 server.clean_searches([invalid])
 

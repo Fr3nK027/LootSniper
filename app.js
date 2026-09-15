@@ -45,6 +45,8 @@ let quickQueryDirty = false;
 let resultView = readStorage('radar-result-view', 'list') === 'grid' ? 'grid' : 'list';
 let linkMode = readStorage('radar-link-mode', 'auto') === 'manual' ? 'manual' : 'auto';
 let resultScope = readStorage('radar-result-scope', 'deals') === 'all' ? 'all' : 'deals';
+let serverSession = '';
+let primaryIntent = readStorage('radar-primary-intent', 'gaming');
 const manualPlatforms = new Set();
 const FILTER_IDS = ['search-input', 'platform-filter', 'category-filter', 'sort-order', 'min-price', 'max-price', 'min-margin', 'with-photo-only', 'favorites-only'];
 const CHECKBOX_FILTERS = new Set(['with-photo-only', 'favorites-only']);
@@ -54,23 +56,32 @@ const SEARCH_PROFILE_VERSION = 1;
 const SORT_ORDERS = ['deal-desc', 'margin-desc', 'price-asc', 'price-desc', 'vs-desc', 'newest'];
 const PLATFORM_LABELS = { VINTED: 'Vinted', EBAY: 'eBay', SUBITO: 'Subito' };
 const CATEGORY_LABELS = { gaming: 'Portatili gaming', component: 'Componenti PC', nas: 'NAS', network: 'Router e rete', server: 'Server', smartphone: 'Smartphone', other: 'Altra elettronica' };
-const FEATURE_FILTERS = {
-  ram: 'RAM rilevata', ram32: 'RAM 32GB+', fastStorage: 'SSD / NVMe', storage1tb: 'Storage 1TB+',
-  rtx40: 'RTX serie 40', rtx50: 'RTX serie 50', oled: 'OLED / Mini LED', reliable: 'Dati affidabili',
-  goodCondition: 'Buone condizioni', repair: 'Da riparare'
+const FACET_DEFINITIONS = {
+  usage: { label: 'Tipologia', options: { gaming:'Gaming', workstation:'Workstation', ai:'AI / hosting', nas:'NAS', server:'Server', component:'Componenti', smartphone:'Smartphone', network:'Router / rete', other:'Altro' } },
+  storageType: { label: 'Tipo di storage', options: { nvme:'NVMe', ssd:'SSD', hdd:'HDD', unknown:'Non specificato' } },
+  ramGeneration: { label: 'Generazione RAM', options: { ddr4:'DDR4', ddr5:'DDR5', unknown:'Non specificata' } },
+  ramAmount: { label: 'Quantità RAM', options: { '8':'8 GB', '16':'16 GB', '24':'24 GB', '32':'32 GB', '48':'48 GB', '64':'64 GB', '96':'96 GB', '128':'128 GB', '256':'256 GB', unknown:'Non specificata' } },
+  cpuFamily: { label: 'Famiglia CPU', options: { i5:'Intel Core i5', i7:'Intel Core i7', i9:'Intel Core i9', ultra5:'Intel Core Ultra 5', ultra7:'Intel Core Ultra 7', ultra9:'Intel Core Ultra 9', ryzen5:'AMD Ryzen 5', ryzen7:'AMD Ryzen 7', ryzen9:'AMD Ryzen 9 / AI 9', threadripper:'AMD Threadripper', xeon:'Intel Xeon', epyc:'AMD EPYC', applem:'Apple M', snapdragon:'Snapdragon X', unknown:'Non specificata' } },
+  cpuGeneration: { label: 'Generazione CPU', options: { intel10:'Intel 10ª', intel11:'Intel 11ª', intel12:'Intel 12ª', intel13:'Intel 13ª', intel14:'Intel 14ª', coreultra:'Intel Core Ultra', ryzen5000:'Ryzen 5000', ryzen6000:'Ryzen 6000', ryzen7000:'Ryzen 7000', ryzen8000:'Ryzen 8000', ryzen9000:'Ryzen 9000', ryzenai300:'Ryzen AI 300', unknown:'Non specificata' } },
+  gpuSeries: { label: 'Serie GPU', options: { rtx20:'NVIDIA RTX 20', rtx30:'NVIDIA RTX 30', rtx40:'NVIDIA RTX 40', rtx50:'NVIDIA RTX 50', nvidiaPro:'NVIDIA RTX Pro / A / Quadro', rx6000:'AMD RX 6000', rx7000:'AMD RX 7000', rx9000:'AMD RX 9000', radeonPro:'AMD Radeon Pro', arc:'Intel Arc', integrated:'Integrata', unknown:'Non specificata' } },
+  brand: { label: 'Marca', options: { asus:'ASUS / ROG', acer:'Acer', lenovo:'Lenovo', hp:'HP', dell:'Dell / Alienware', msi:'MSI', razer:'Razer', apple:'Apple', framework:'Framework', gigabyte:'Gigabyte / Aorus', other:'Altra / non indicata' } },
+  condition: { label: 'Condizioni accettate', options: { new:'Nuovo / sigillato', good:'Ottimo / come nuovo', refurbished:'Ricondizionato', used:'Usato', worn:'Con usura', unknown:'Non specificate' } },
+  keyboard: { label: 'Layout tastiera', options: { it:'Italiano', us:'USA', uk:'UK', de:'Tedesco', es:'Spagnolo', fr:'Francese', unknown:'Non specificato' } }
 };
-let featureFilters = readStorage('radar-feature-filters', {});
-if (!featureFilters || typeof featureFilters !== 'object' || Array.isArray(featureFilters)) featureFilters = {};
-featureFilters = Object.fromEntries(Object.entries(featureFilters).filter(([key, value]) => Object.hasOwn(FEATURE_FILTERS, key) && ['include', 'exclude'].includes(value)));
+if (!Object.hasOwn(FACET_DEFINITIONS.usage.options, primaryIntent)) primaryIntent = 'gaming';
+let guidedFilters = readStorage('radar-guided-filters', {});
+if (!guidedFilters || typeof guidedFilters !== 'object' || Array.isArray(guidedFilters)) guidedFilters = {};
+guidedFilters = Object.fromEntries(Object.entries(guidedFilters).filter(([key, values]) => Object.hasOwn(FACET_DEFINITIONS, key) && Array.isArray(values))
+  .map(([key, values]) => [key, [...new Set(values.filter(value => Object.hasOwn(FACET_DEFINITIONS[key].options, value)))]]).filter(([, values]) => values.length));
 
 function resetBrowserSession(session) {
   bombsArray = []; favorites = new Set(); savedSearches = []; selectedForVersus = [];
   totalAnalyzed = 0; ignoredImports = {}; importVersions = new Map(); importCursor = 0;
-  undoArchive = null; renderedLimit = 60; quickQueryDirty = false; manualPlatforms.clear(); resultScope = 'deals'; featureFilters = {};
+  undoArchive = null; renderedLimit = 60; quickQueryDirty = false; manualPlatforms.clear(); resultScope = 'deals'; guidedFilters = {}; primaryIntent = 'gaming';
   persist('radar-results', []); persist('radar-favorites', []); persist('radar-searches', []);
   persist('radar-searches-local-backup', []); persist('radar-ignored-imports', {});
   persist('radar-undo', null); persist('radar-filters', {}); persist('radar-result-scope', resultScope);
-  persist('radar-feature-filters', featureFilters); persist(SESSION_KEY, session);
+  persist('radar-guided-filters', guidedFilters); persist('radar-primary-intent', primaryIntent); persist(SESSION_KEY, session);
 }
 
 function resetRadarResults() {
@@ -83,13 +94,15 @@ function resetRadarResults() {
 async function initializeSession() {
   const status = await api('/api/status');
   if (typeof status.session !== 'string' || !status.session) throw new Error('Riavvia il server per iniziare una nuova sessione.');
+  serverSession = status.session;
   if (readStorage(SESSION_KEY, '') !== status.session) resetBrowserSession(status.session);
 }
 function persistFilters() {
   const values = Object.fromEntries(FILTER_IDS.map(id => [id, CHECKBOX_FILTERS.has(id) ? $(id).checked : $(id).value]));
   persist('radar-filters', values);
   persist('radar-result-scope', resultScope);
-  persist('radar-feature-filters', featureFilters);
+  persist('radar-guided-filters', guidedFilters);
+  persist('radar-primary-intent', primaryIntent);
 }
 function restoreFilters() {
   const values = readStorage('radar-filters', {});
@@ -184,6 +197,8 @@ function setLinkMode(mode, announce = false) {
     ? 'Incolla i link di ricerca dei marketplace. Puoi lasciare vuoto un sito che non vuoi controllare.'
     : 'Scrivi cosa cerchi: i link di Vinted, eBay e Subito vengono creati automaticamente.';
   if (linkMode === 'manual') $('source-details').open = true;
+  document.body.classList.toggle('manual-search', linkMode === 'manual');
+  renderGuidedFilters();
   persist('radar-link-mode', linkMode);
   if (announce) logMsg(linkMode === 'manual' ? 'Modalità manuale: incolla i link dei marketplace.' : 'Modalità automatica: scrivi il prodotto e LootSniper preparerà i tre link.', 'log-ok');
 }
@@ -201,11 +216,11 @@ function loadSavedSearch(search) {
   $('with-photo-only').checked = search.withPhotoOnly === true;
   $('favorites-only').checked = false;
   resultScope = search.resultScope === 'all' ? 'all' : 'deals';
-  featureFilters = search.featureFilters && typeof search.featureFilters === 'object' && !Array.isArray(search.featureFilters)
-    ? Object.fromEntries(Object.entries(search.featureFilters).filter(([key, value]) => Object.hasOwn(FEATURE_FILTERS, key) && ['include', 'exclude'].includes(value))) : {};
+  primaryIntent = Object.hasOwn(FACET_DEFINITIONS.usage.options, search.primaryIntent) ? search.primaryIntent : 'gaming';
+  guidedFilters = sanitizeGuidedFilters(search.guidedFilters);
   $('scope-deals').setAttribute('aria-pressed', String(resultScope === 'deals'));
   $('scope-all').setAttribute('aria-pressed', String(resultScope === 'all'));
-  renderFeatureFilters();
+  renderGuidedFilters();
   $('deep-scan').checked = search.deepScan !== false;
   quickQueryDirty = false; manualPlatforms.clear();
   const customPlatforms = Array.isArray(search.customPlatforms) ? search.customPlatforms : [];
@@ -231,6 +246,21 @@ function marketplaceSearchUrl(platform, query) {
   if (platform === 'SUBITO') return 'https://www.subito.it/annunci-italia/vendita/usato/?q=' + encoded;
   return 'https://www.vinted.it/catalog?search_text=' + encoded;
 }
+function automaticQuery() {
+  const base = $('market-query').value.trim(), additions = [];
+  for (const [group, values] of Object.entries(guidedFilters)) {
+    const usable = values.filter(value => value !== 'unknown');
+    if (usable.length !== 1 || group === 'condition' || group === 'usage') continue;
+    additions.push(FACET_DEFINITIONS[group].options[usable[0]].replace(/^(NVIDIA|AMD|Intel)\s+/i, ''));
+  }
+  return [...new Set([base, ...additions].filter(Boolean))].join(' ').slice(0, 200);
+}
+function updateSearchSummary() {
+  const summary = $('search-summary'); if (!summary) return;
+  const query = $('market-query').value.trim() || 'Ricerca da configurare';
+  summary.innerHTML = '<strong>' + escapeHtml(query) + '</strong><span>' + (linkMode === 'auto' ? 'Ricerca automatica' : 'Link manuali') +
+    ' · ' + escapeHtml(FACET_DEFINITIONS.usage.options[primaryIntent] || 'Altro') + '</span>';
+}
 function prepareQuickQuery(query) {
   const clean = String(query || '').trim().slice(0, 200);
   if (!clean) { $('market-query').focus(); return false; }
@@ -243,7 +273,7 @@ function prepareQuickQuery(query) {
   return true;
 }
 function getSources() {
-  const query = $('market-query').value.trim();
+  const query = linkMode === 'auto' ? automaticQuery() : $('market-query').value.trim();
   if (linkMode === 'auto' && !query) return [];
   const sources = Object.keys(MARKET_HOSTS).map(platform => {
     const input = $('link-' + platform.toLowerCase());
@@ -293,7 +323,8 @@ function searchProfile(entry) {
       order: entry.sortOrder || 'deal-desc',
       text: entry.resultQuery || '',
       scope: entry.resultScope === 'all' ? 'all' : 'deals',
-      features: entry.featureFilters || {}
+      primaryIntent: entry.primaryIntent || 'gaming',
+      facets: entry.guidedFilters || {}
     },
     deepScan: entry.deepScan !== false,
     updatedAt: entry.updatedAt
@@ -345,9 +376,9 @@ function parseSearchProfile(data) {
   if (typeof entry.resultQuery !== 'string' || entry.resultQuery.length > 500) throw new Error('Filtro testo non valido.');
   entry.resultScope = filters.scope ?? 'deals';
   if (!['deals', 'all'].includes(entry.resultScope)) throw new Error('Vista risultati non valida.');
-  const features = filters.features ?? {};
-  if (!features || typeof features !== 'object' || Array.isArray(features) || Object.entries(features).some(([key, value]) => !Object.hasOwn(FEATURE_FILTERS, key) || !['include', 'exclude'].includes(value))) throw new Error('Filtri caratteristiche non validi.');
-  entry.featureFilters = { ...features };
+  entry.primaryIntent = filters.primaryIntent ?? 'gaming';
+  if (!Object.hasOwn(FACET_DEFINITIONS.usage.options, entry.primaryIntent)) throw new Error('Tipologia principale non valida.');
+  entry.guidedFilters = sanitizeGuidedFilters(filters.facets ?? {}, true);
   if (data.deepScan !== undefined && typeof data.deepScan !== 'boolean') throw new Error('deepScan deve essere true oppure false.');
   entry.deepScan = data.deepScan !== false;
   entry.updatedAt = new Date().toISOString();
@@ -388,7 +419,7 @@ async function saveSearch() {
       categoryFilter: $('category-filter').value,
       withPhotoOnly: $('with-photo-only').checked,
       sortOrder: SORT_ORDERS.includes($('sort-order').value) ? $('sort-order').value : 'deal-desc',
-      resultQuery: $('search-input').value.slice(0, 500), resultScope, featureFilters: { ...featureFilters },
+      resultQuery: $('search-input').value.slice(0, 500), resultScope, primaryIntent, guidedFilters: JSON.parse(JSON.stringify(guidedFilters)),
       deepScan: $('deep-scan').checked, updatedAt: new Date().toISOString() };
   } catch (error) { logMsg(error.message, 'log-warn'); return; }
   sources.forEach(source => { entry[source.platform.toLowerCase()] = source.url; });
@@ -431,40 +462,45 @@ function priceRangeError() {
   minimum.setAttribute('aria-invalid', String(invalid)); maximum.setAttribute('aria-invalid', String(invalid));
   return message;
 }
-function featureMatches(item, key) {
-  const signals = listingSignals(item.titolo + ' ' + item.details);
-  if (key === 'ram') return signals.ramGB > 0;
-  if (key === 'ram32') return signals.ramGB >= 32;
-  if (key === 'fastStorage') return signals.hasFastStorage;
-  if (key === 'storage1tb') return signals.storageTB >= 1;
-  if (key === 'rtx40') return signals.rtx40;
-  if (key === 'rtx50') return signals.rtx50;
-  if (key === 'oled') return signals.oled;
-  if (key === 'reliable') return item.evalData.confidence >= 80;
-  if (key === 'goodCondition') return ['new', 'good'].includes(item.evalData.condition);
-  if (key === 'repair') return item.evalData.condition === 'repair';
-  return false;
+function sanitizeGuidedFilters(value, strict = false) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    if (strict) throw new Error('Filtri guidati non validi.');
+    return {};
+  }
+  const clean = {};
+  for (const [group, values] of Object.entries(value)) {
+    const validGroup = Object.hasOwn(FACET_DEFINITIONS, group), validValues = Array.isArray(values) && validGroup &&
+      values.every(option => typeof option === 'string' && Object.hasOwn(FACET_DEFINITIONS[group].options, option));
+    if (!validValues) { if (strict) throw new Error('Filtro guidato non valido: ' + group + '.'); else continue; }
+    const unique = [...new Set(values)]; if (unique.length) clean[group] = unique;
+  }
+  return clean;
 }
-function matchesFeatureFilters(item) {
-  return Object.entries(featureFilters).every(([key, state]) => state === 'include' ? featureMatches(item, key) : !featureMatches(item, key));
+function facetMatches(item, group, selected) {
+  const values = listingFacets(item.titolo + ' ' + item.details)[group] || [];
+  return selected.some(value => values.includes(value));
 }
-function renderFeatureFilters() {
-  const container = $('feature-filters');
-  container.innerHTML = Object.entries(FEATURE_FILTERS).map(([key, label]) => {
-    const state = featureFilters[key] || 'neutral';
-    const prefix = state === 'include' ? '+ ' : state === 'exclude' ? '− ' : '';
-    const action = state === 'include' ? 'incluso; clicca per escludere' : state === 'exclude' ? 'escluso; clicca per azzerare' : 'neutro; clicca per includere';
-    return '<button type="button" class="tri-filter ' + state + '" data-feature="' + key + '" data-state="' + state +
-      '" aria-label="' + escapeHtml(label + ': ' + action) + '">' + prefix + escapeHtml(label) + '</button>';
+function matchesGuidedFilters(item) {
+  return Object.entries(guidedFilters).every(([group, selected]) => !selected.length || facetMatches(item, group, selected));
+}
+function renderGuidedFilters() {
+  const container = $('guided-filter-groups');
+  if (!container) return;
+  container.innerHTML = Object.entries(FACET_DEFINITIONS).map(([group, definition]) => {
+    const selected = guidedFilters[group] || [];
+    const choices = Object.entries(definition.options).filter(([value]) => !(primaryIntent === 'gaming' && group === 'storageType' && value === 'hdd'));
+    return '<details class="facet-group"><summary><span>' + escapeHtml(definition.label) +
+      '</span><b>' + (selected.length || '') + '</b></summary><div>' + choices.map(([value, label]) => '<label><input type="checkbox" data-facet-group="' + group +
+      '" value="' + value + '" ' + (selected.includes(value) ? 'checked' : '') + '><span>' + escapeHtml(label) + '</span></label>').join('') + '</div></details>';
   }).join('');
+  $('guided-filter-title').textContent = linkMode === 'auto' ? 'Filtri della ricerca' : 'Filtri sui risultati';
 }
-function cycleFeatureFilter(key) {
-  if (!Object.hasOwn(FEATURE_FILTERS, key)) return false;
-  const current = featureFilters[key] || 'neutral';
-  if (current === 'neutral') featureFilters[key] = 'include';
-  else if (current === 'include') featureFilters[key] = 'exclude';
-  else delete featureFilters[key];
-  renderedLimit = 60; persistFilters(); renderFeatureFilters(); renderAllCards();
+function setGuidedFilter(group, value, checked) {
+  if (!Object.hasOwn(FACET_DEFINITIONS, group) || !Object.hasOwn(FACET_DEFINITIONS[group].options, value)) return false;
+  const selected = new Set(guidedFilters[group] || []);
+  if (checked) selected.add(value); else selected.delete(value);
+  if (selected.size) guidedFilters[group] = [...selected]; else delete guidedFilters[group];
+  renderedLimit = 60; persistFilters(); renderGuidedFilters(); renderAllCards();
   return true;
 }
 function applyResultScope(scope) {
@@ -484,7 +520,7 @@ function filteredItems() {
     && (!$('category-filter').value || resultCategory(item) === $('category-filter').value)
     && (!$('with-photo-only').checked || Boolean(item.image))
     && (!$('favorites-only').checked || favorites.has(item.url))
-    && item.prezzo >= minPrice && item.prezzo <= maxPrice && item.evalData.margine >= minMargin && matchesFeatureFilters(item)
+    && item.prezzo >= minPrice && item.prezzo <= maxPrice && item.evalData.margine >= minMargin && matchesGuidedFilters(item)
     && normalizeListingText(item.titolo + ' ' + item.evalData.gpuName + ' ' + item.details).includes(query));
   const sort = $('sort-order').value;
   items.sort((a, b) => sort === 'price-asc' ? a.prezzo - b.prezzo : sort === 'price-desc' ? b.prezzo - a.prezzo
@@ -512,16 +548,16 @@ function renderActiveFilters() {
   if ($('min-margin').value !== '') entries.push(['min-margin', 'Risparmio da ' + $('min-margin').value + ' €']);
   if ($('with-photo-only').checked) entries.push(['with-photo-only', 'Solo con foto']);
   if ($('favorites-only').checked) entries.push(['favorites-only', 'Solo preferiti']);
-  Object.entries(featureFilters).forEach(([key, state]) => entries.push(['feature:' + key,
-    (state === 'include' ? '+ ' : '− ') + FEATURE_FILTERS[key]]));
+  Object.entries(guidedFilters).forEach(([group, values]) => entries.push(['facet:' + group,
+    FACET_DEFINITIONS[group].label + ': ' + values.map(value => FACET_DEFINITIONS[group].options[value]).join(', ')]));
   $('active-filters').hidden = !entries.length;
   $('active-filters').innerHTML = entries.length ? '<span>Filtri attivi</span>' + entries.map(([id, label]) =>
     '<button type="button" data-clear-filter="' + id + '" aria-label="Rimuovi filtro ' + escapeHtml(label) + '">' + escapeHtml(label) + ' <b aria-hidden="true">×</b></button>').join('') : '';
 }
 function clearActiveFilter(id) {
-  if (id.startsWith('feature:')) {
-    const key = id.slice(8); if (!Object.hasOwn(FEATURE_FILTERS, key)) return false;
-    delete featureFilters[key]; renderFeatureFilters();
+  if (id.startsWith('facet:')) {
+    const key = id.slice(6); if (!Object.hasOwn(FACET_DEFINITIONS, key)) return false;
+    delete guidedFilters[key]; renderGuidedFilters();
   } else if (!['search-input', 'platform-filter', 'category-filter', 'min-price', 'max-price', 'min-margin', 'with-photo-only', 'favorites-only'].includes(id)) return false;
   else if (CHECKBOX_FILTERS.has(id)) $(id).checked = false; else $(id).value = '';
   renderedLimit = 60; persistFilters(); renderAllCards();
@@ -537,6 +573,9 @@ function renderAllCards() {
   const items = filteredItems();
   selectedForVersus = selectedForVersus.filter(url => bombsArray.some(item => item.url === url));
   const dealCount = bombsArray.filter(item => item.evalData.isDeal).length;
+  $('stat-strip').hidden = !bombsArray.length && !totalAnalyzed;
+  document.body.classList.toggle('has-results', bombsArray.length > 0 || totalAnalyzed > 0);
+  updateSearchSummary();
   const emptyTitle = rangeError
     ? 'Controlla la fascia di prezzo'
     : resultScope === 'deals' && bombsArray.length && !dealCount
@@ -911,14 +950,14 @@ FILTER_IDS.forEach(id => {
 });
 $('scope-deals').addEventListener('click', () => applyResultScope('deals'));
 $('scope-all').addEventListener('click', () => applyResultScope('all'));
-$('feature-filters').addEventListener('click', event => {
-  const button = event.target?.closest?.('[data-feature]');
-  if (button) cycleFeatureFilter(button.dataset.feature);
+$('guided-filter-groups').addEventListener('change', event => {
+  const input = event.target?.closest?.('[data-facet-group]');
+  if (input) setGuidedFilter(input.dataset.facetGroup, input.value, input.checked);
 });
 $('btn-reset-filters').addEventListener('click', () => {
   ['search-input', 'platform-filter', 'category-filter', 'min-price', 'max-price', 'min-margin'].forEach(id => { $(id).value = ''; });
   CHECKBOX_FILTERS.forEach(id => { $(id).checked = false; });
-  featureFilters = {}; resultScope = 'deals'; renderFeatureFilters();
+  guidedFilters = {}; resultScope = 'deals'; renderGuidedFilters();
   $('scope-deals').setAttribute('aria-pressed', 'true'); $('scope-all').setAttribute('aria-pressed', 'false');
   persistFilters(); renderAllCards();
 });
@@ -933,7 +972,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) impo
 async function initializeApp() {
   try { await initializeSession(); }
   catch (error) { logMsg(error.message, 'log-warn'); }
-  restoreFilters(); setLinkMode(linkMode); applyResultView(); renderFeatureFilters();
+  restoreFilters(); setLinkMode(linkMode); applyResultView(); renderGuidedFilters();
   $('scope-deals').setAttribute('aria-pressed', String(resultScope === 'deals'));
   $('scope-all').setAttribute('aria-pressed', String(resultScope === 'all'));
   renderAllCards(); renderSavedSearches();

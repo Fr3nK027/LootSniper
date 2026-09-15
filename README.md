@@ -32,7 +32,14 @@ Windows può mostrare un avviso perché lo script non è firmato digitalmente. V
 
 ## Primo avvio
 
-La prima apertura mostra una guida in tre passaggi. Puoi scegliere **Automatico**, scrivere cosa cerchi e lasciare che LootSniper prepari i link, oppure **Manuale** e incollare gli indirizzi delle ricerche configurate direttamente su Vinted, eBay e Subito. La guida rimane sempre disponibile con **Guida rapida**.
+Ogni avvio mostra una configurazione guidata e lascia la dashboard pulita finché non hai deciso cosa cercare. Il percorso chiede, nell’ordine:
+
+1. la tipologia principale e il prodotto, per esempio gaming, workstation, AI/hosting, NAS, server, componenti, smartphone o rete;
+2. **Automatico**, per far creare a LootSniper i tre link, oppure **Manuale**, per incollare gli indirizzi configurati direttamente su Vinted, eBay e Subito;
+3. i filtri facoltativi, presentati uno alla volta e sempre saltabili;
+4. l’accettazione delle regole per l’uso locale del browser e dei propri account sui marketplace.
+
+LootSniper non chiede né conserva password, cookie o codici di accesso. Login, CAPTCHA e verifiche rimangono nel browser e vanno completati personalmente. Il percorso si può riaprire in qualsiasi momento con **Nuova ricerca guidata**.
 
 Il pulsante **Giorno / Notte** accanto al logo cambia l’aspetto della dashboard e ricorda la scelta. Al primo avvio LootSniper segue automaticamente il tema di Windows.
 
@@ -64,16 +71,16 @@ Per la diagnostica con terminale visibile usa `python launcher.py` e chiudi con 
 
 ## Esegui una ricerca
 
-1. Scegli come preparare i link:
-   - **Automatico**: scrivi, per esempio, `NAS Synology economico`, `router Wi-Fi 7` oppure `laptop RTX 4070`. Premi **Genera i tre link dalla ricerca** oppure direttamente **Esegui ricerca**: LootSniper crea gli URL di Vinted, eBay e Subito.
-   - **Manuale**: esegui la ricerca sui marketplace, applica lì i filtri desiderati e incolla gli URL completi nei campi Vinted, eBay e Subito. Puoi lasciare vuoto un sito che non vuoi controllare. Per eBay sono accettati sia `ebay.it` sia `ebay.com`, compresi gli URL lunghi con filtri avanzati.
-2. In **Impostazioni → Ricerca** attiva **Più pagine** per leggere fino a 20 pagine per sito.
-3. Premi **Esegui ricerca** e segui il messaggio di stato. Il riquadro **Attività** contiene i dettagli tecnici.
-4. Per fermare il lavoro premi **Interrompi ricerca**: quanto raccolto rimane salvato.
+1. Completa la configurazione iniziale e usa **Salta questo filtro** per ogni caratteristica che non vuoi imporre.
+2. In modalità **Automatico**, LootSniper prepara gli URL di Vinted, eBay e Subito dalla descrizione scelta. In modalità **Manuale**, puoi lasciare vuoto un sito e incollare almeno un URL completo; per eBay sono accettati sia `ebay.it` sia `ebay.com`, compresi i link lunghi con filtri avanzati.
+3. Controlla il riepilogo compatto nella barra laterale. Le sorgenti dettagliate restano raccolte sotto **Modifica sorgenti e parole chiave**.
+4. In **Impostazioni → Ricerca** attiva **Più pagine** per leggere fino a 20 pagine per sito.
+5. Premi **Esegui ricerca** e segui il messaggio di stato. Il riquadro **Attività** contiene i dettagli tecnici.
+6. Per fermare il lavoro premi **Interrompi ricerca**: quanto raccolto rimane salvato.
 
 Ogni volta che premi **Esegui ricerca**, LootSniper svuota il radar precedente e riparte da zero. Anche un nuovo avvio azzera annunci, preferiti, filtri, importazioni e l’elenco temporaneo delle ricerche. Tema, configurazione Discord e file ricerca già scaricati rimangono disponibili.
 
-La vista iniziale **Bombe** mostra soltanto gli annunci che superano insieme le soglie di margine, completezza dei dati e condizioni. Premi **Tutti gli annunci** per vedere anche NAS, router, componenti e prodotti che richiedono un confronto manuale: restano disponibili, ma non vengono più confusi con le occasioni classificate.
+I contatori **Bombe verificate**, **Questa sessione** e **Da tenere d’occhio** restano nascosti finché non esistono risultati. Dopo la ricerca, la vista iniziale **Bombe** mostra soltanto gli annunci che superano insieme le soglie di margine, completezza dei dati e condizioni. Premi **Tutti gli annunci** per vedere anche NAS, router, componenti e prodotti che richiedono un confronto manuale.
 
 Per l’elettronica generica, LootSniper evidenzia soltanto caratteristiche scritte nell’annuncio: memoria, archiviazione, numero di bay, standard Wi-Fi, velocità di rete, 5G e Dual SIM. Nella tabella di confronto le stime non disponibili restano esplicitamente indicate come **confronto manuale**.
 
@@ -83,7 +90,7 @@ Alcuni marketplace possono bloccare la lettura diretta o caricare gli annunci so
 
 1. Prepara i link.
 2. Scrivi un nome in **Nome della ricerca**.
-3. Imposta, se servono, budget, differenza minima, marketplace, ordinamento e **Più pagine**.
+3. Imposta, se servono, tipologia, storage, RAM, CPU, GPU, marca, condizioni, layout tastiera, budget, marketplace, ordinamento e **Più pagine**.
 4. Premi **Salva**. Il browser scarica un file con un nome come `LootSniper-NAS-economici.json`.
 5. Durante la sessione premi il nome per ricaricare la ricerca, **▶** per eseguirla o **×** per rimuoverla dall’elenco.
 6. In futuro premi **Importa file ricerca**, scegli il JSON e controlla i dati caricati. Premi **Esegui ricerca** per avviarla.
@@ -102,7 +109,8 @@ L’elenco interno è condiviso con l’estensione soltanto durante la sessione 
 
 ## Valuta, filtra e confronta
 
-- Il catalogo parte in modalità **Lista**: immagine a sinistra, caratteristiche e controlli al centro, prezzo e azioni a destra. È pensato per confrontare rapidamente componenti ed elettronica con una struttura familiare.
+- I risultati iniziano subito accanto alla colonna dei filtri, così sullo schermo entrano più annunci e serve meno scorrimento.
+- Il catalogo parte in modalità **Lista**: immagine a sinistra, caratteristiche e controlli al centro, prezzo e azioni a destra.
 - Premi **Griglia** per una vista più compatta; LootSniper ricorda la vista scelta sul PC.
 - Cerca un modello o una caratteristica nei risultati.
 - Passa da **Bombe** a **Tutti gli annunci** per separare le opportunità classificate dal catalogo raccolto.
@@ -113,7 +121,8 @@ L’elenco interno è condiviso con l’estensione soltanto durante la sessione 
 - Se il prezzo minimo supera il massimo, il catalogo indica subito come correggere la fascia invece di confonderla con una ricerca senza risultati.
 - Attiva **Solo con foto** quando vuoi escludere gli annunci senza immagine; anche questa scelta viene conservata nel file ricerca.
 - I filtri applicati compaiono sopra gli annunci: premi **×** su un singolo filtro per rimuoverlo senza perdere gli altri.
-- I filtri caratteristiche hanno tre stati: il primo clic include (`+ RAM`), il secondo esclude (`− RAM`), il terzo torna neutro. Sono disponibili RAM, RAM 32 GB+, SSD/NVMe, storage 1 TB+, RTX serie 40 e 50, OLED/Mini LED, affidabilità dei dati e condizioni.
+- I gruppi nella colonna laterale funzionano come nei marketplace: apri una sezione e seleziona uno o più valori. I valori dello stesso gruppo sono alternativi, mentre gruppi diversi si combinano. Nessuna selezione significa che quel gruppo non limita i risultati.
+- Sono disponibili tipologia, tipo di storage, generazione e quantità RAM, famiglia e generazione CPU, serie GPU NVIDIA/AMD/Intel, marca, condizioni e layout tastiera. Quando la ricerca è gaming, gli annunci solo HDD vengono esclusi dalla preselezione, ma quelli con storage non indicato restano visibili.
 - Premi la **stella** sulla scheda per salvarla nei preferiti.
 - Usa **Solo preferiti** per restringere l’archivio.
 - Scegli l’ordinamento; **Mostra altri 60 annunci** carica le schede successive.

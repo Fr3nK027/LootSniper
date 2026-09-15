@@ -71,6 +71,29 @@ test('opportunity classification combines value, data reliability and declared c
   assert.equal(signals.rtx50, true);
   assert.equal(signals.oled, true);
 });
+test('guided facets recognize portable hardware, competitors and unknown fields', () => {
+  const gaming = core.listingFacets('Lenovo Legion laptop Ryzen 9 7945HX RTX 4080, 32 GB RAM DDR5, 1 TB NVMe, tastiera italiana, ottime condizioni');
+  assert.ok(gaming.usage.includes('gaming'));
+  assert.deepEqual(gaming.storageType, ['nvme']);
+  assert.deepEqual(gaming.ramGeneration, ['ddr5']);
+  assert.deepEqual(gaming.ramAmount, ['32']);
+  assert.ok(gaming.cpuFamily.includes('ryzen9'));
+  assert.ok(gaming.cpuGeneration.includes('ryzen7000'));
+  assert.deepEqual(gaming.gpuSeries, ['rtx40']);
+  assert.deepEqual(gaming.brand, ['lenovo']);
+  assert.deepEqual(gaming.condition, ['good']);
+  assert.deepEqual(gaming.keyboard, ['it']);
+  const sparse = core.listingFacets('Notebook Framework usato');
+  assert.deepEqual(sparse.storageType, ['unknown']);
+  assert.deepEqual(sparse.ramAmount, ['unknown']);
+  assert.deepEqual(sparse.gpuSeries, ['unknown']);
+  assert.deepEqual(sparse.keyboard, ['unknown']);
+  const workstation = core.listingFacets('Dell Precision workstation Xeon con RTX A5000 e tastiera US');
+  assert.ok(workstation.usage.includes('workstation'));
+  assert.ok(workstation.cpuFamily.includes('xeon'));
+  assert.ok(workstation.gpuSeries.includes('nvidiaPro'));
+  assert.deepEqual(workstation.keyboard, ['us']);
+});
 test('restored cards reject invalid links and strip untrusted tag classes', () => {
   const entry = { titolo: '<img src=x onerror=alert(1)>', prezzo: 500, url: 'https://ebay.it/itm/123', platform: 'EBAY',
     evalData: { stima: 900, vsScore: 900, tags: [{ text: 'test', cls: '" onclick="evil' }, { text: 'Brand eco -20%', cls: 't-down' }] } };

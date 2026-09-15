@@ -29,7 +29,7 @@ ALLOWED_HOSTS = set().union(*PLATFORM_HOSTS.values())
 STATIC_FILES = {"radar usato 3 market.html", "app.js", "styles.css", "radar-core.js", "radar-runtime.js", "browser-bridge/listings.js", "experience.css", "radar-guide.js", "theme.js", "assets/lootsniper.svg", "assets/lootsniper.ico"}
 WORKSPACE_ID = hashlib.sha256(str(ROOT).casefold().encode()).hexdigest()[:16]
 PORT = 8765
-VERSION = "8.0"
+VERSION = "8.1"
 CATEGORY_FILTERS = {"", "gaming", "component", "nas", "network", "server", "smartphone", "other"}
 MAX_BODY = 2 * 1024 * 1024
 MAX_HTML = 10 * 1024 * 1024
@@ -156,9 +156,28 @@ def clean_searches(searches):
         if (not isinstance(feature_filters, dict) or any(key not in allowed_features or value not in {"include", "exclude"}
                                                        for key, value in feature_filters.items())):
             raise ValueError("Filtri caratteristiche non validi")
+        facet_options = {
+            "usage": {"gaming", "workstation", "ai", "nas", "server", "component", "smartphone", "network", "other"},
+            "storageType": {"nvme", "ssd", "hdd", "unknown"}, "ramGeneration": {"ddr4", "ddr5", "unknown"},
+            "ramAmount": {"8", "16", "24", "32", "48", "64", "96", "128", "256", "unknown"},
+            "cpuFamily": {"i5", "i7", "i9", "ultra5", "ultra7", "ultra9", "ryzen5", "ryzen7", "ryzen9", "threadripper", "xeon", "epyc", "applem", "snapdragon", "unknown"},
+            "cpuGeneration": {"intel10", "intel11", "intel12", "intel13", "intel14", "coreultra", "ryzen5000", "ryzen6000", "ryzen7000", "ryzen8000", "ryzen9000", "ryzenai300", "unknown"},
+            "gpuSeries": {"rtx20", "rtx30", "rtx40", "rtx50", "nvidiaPro", "rx6000", "rx7000", "rx9000", "radeonPro", "arc", "integrated", "unknown"},
+            "brand": {"asus", "acer", "lenovo", "hp", "dell", "msi", "razer", "apple", "framework", "gigabyte", "other"},
+            "condition": {"new", "good", "refurbished", "used", "worn", "unknown"},
+            "keyboard": {"it", "us", "uk", "de", "es", "fr", "unknown"}}
+        primary_intent = item.get("primaryIntent", "gaming")
+        if primary_intent not in facet_options["usage"]:
+            raise ValueError("Tipologia principale non valida")
+        guided_filters = item.get("guidedFilters", {})
+        if (not isinstance(guided_filters, dict) or any(group not in facet_options or not isinstance(values, list)
+                or len(values) > len(facet_options[group]) or any(not isinstance(value, str) or value not in facet_options[group] for value in values)
+                for group, values in guided_filters.items())):
+            raise ValueError("Filtri guidati non validi")
         entry.update({"platformFilter": platform_filter, "categoryFilter": category_filter, "sortOrder": sort_order,
                       "resultQuery": result_query, "deepScan": deep_scan, "withPhotoOnly": with_photo_only,
-                      "resultScope": result_scope, "featureFilters": feature_filters})
+                      "resultScope": result_scope, "featureFilters": feature_filters, "primaryIntent": primary_intent,
+                      "guidedFilters": guided_filters})
         clean.append(entry)
         names.add(name.casefold())
     return clean

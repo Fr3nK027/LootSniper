@@ -23,7 +23,7 @@ function harness({storage = {}, searches = [], revision = 'v1', session = 'sessi
     URL:BrowserURL, Blob, Intl, Date, AbortSignal, AbortController, console, Map, Set, Promise,
     DOMParser: class { parseFromString() { return {}; } },
     setInterval(){}, setTimeout, location: {protocol:'http:'},
-    document: { hidden: true, getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); },
+    document: { hidden: true, body: {classList:{toggle(){},add(){},remove(){}}}, getElementById(id) { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); },
       createElement: element, addEventListener(){} },
     localStorage: {getItem:key=>memory.get(key) ?? null, setItem:(key,value)=>memory.set(key,value)},
     fetch: async (url, options={}) => {
@@ -83,21 +83,22 @@ test('imports update a saved listing even when its price is no longer a deal', a
   app.run("resultScope = 'all'");
   assert.equal(app.run('filteredItems().length'), 1);
 });
-test('default radar shows only qualified deals and tri-state feature filters include then exclude', async () => {
+test('default radar shows only qualified deals and guided facets support optional multi-selection', async () => {
   const app = harness(); await app.run('initialSync');
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/101',title:'Laptop RTX 4070 32 GB RAM 1 TB NVMe ottime condizioni',price:800,updatedAt:Date.now()})");
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/102',title:'Laptop RTX 4070 16 GB RAM 512 GB SSD usato',price:1300,updatedAt:Date.now()})");
   assert.equal(app.run('bombsArray[0].evalData.isDeal'), true);
   assert.equal(app.run('bombsArray[1].evalData.isDeal'), false);
   assert.equal(app.run('filteredItems().length'), 1);
-  assert.equal(app.run("cycleFeatureFilter('ram32')"), true);
-  assert.equal(app.run("featureFilters.ram32"), 'include');
+  assert.equal(app.run("setGuidedFilter('ramAmount', '32', true)"), true);
+  assert.equal(app.run("JSON.stringify(guidedFilters.ramAmount)"), '["32"]');
   assert.equal(app.run('filteredItems().length'), 1);
-  app.run("cycleFeatureFilter('ram32')");
-  assert.equal(app.run("featureFilters.ram32"), 'exclude');
-  assert.equal(app.run('filteredItems().length'), 0);
-  app.run("cycleFeatureFilter('ram32')");
-  assert.equal(app.run("featureFilters.ram32"), undefined);
+  app.run("resultScope = 'all'; setGuidedFilter('ramAmount', '16', true)");
+  assert.equal(app.run("JSON.stringify(guidedFilters.ramAmount)"), '["32","16"]');
+  assert.equal(app.run('filteredItems().length'), 2);
+  app.run("setGuidedFilter('ramAmount', '32', false)");
+  assert.equal(app.run('filteredItems().length'), 1);
+  assert.match(app.run('filteredItems()[0].titolo'), /16 GB/);
 });
 test('generic technology such as NAS and routers remains visible for manual comparison', async () => {
   const app = harness(); await app.run('initialSync');
@@ -307,7 +308,7 @@ test('saving a generic electronics search downloads a reusable editable profile'
   app.elements.get('category-filter').value = 'nas';
   app.elements.get('with-photo-only').checked = true;
   app.elements.get('sort-order').value = 'price-asc';
-  app.run("resultScope = 'all'; featureFilters = {storage1tb:'include', repair:'exclude'}");
+  app.run("resultScope = 'all'; primaryIntent = 'nas'; guidedFilters = {usage:['nas'], storageType:['hdd','unknown'], brand:['other']}");
   app.run("$('deep-scan').checked = true; quickQueryDirty = true");
   await app.run('saveSearch()');
   assert.equal(app.downloads.length, 1);
@@ -323,7 +324,8 @@ test('saving a generic electronics search downloads a reusable editable profile'
   assert.equal(profile.filters.withPhoto, true);
   assert.equal(profile.filters.order, 'price-asc');
   assert.equal(profile.filters.scope, 'all');
-  assert.deepEqual(profile.filters.features, {storage1tb:'include', repair:'exclude'});
+  assert.equal(profile.filters.primaryIntent, 'nas');
+  assert.deepEqual(profile.filters.facets, {usage:['nas'], storageType:['hdd','unknown'], brand:['other']});
 });
 test('a manual search keeps pasted links in its reusable file and restores manual mode', async () => {
   const app = harness(); await app.run('initialSync');
@@ -358,7 +360,7 @@ test('an edited search profile restores query, custom URLs and filters', async (
   const app = harness(); await app.run('initialSync');
   const profile = {format:'lootsniper-search',version:1,name:'Telefono ricondizionato',query:'iPhone 15 256GB',
     marketplaces:{vinted:true,ebay:'https://www.ebay.it/sch/i.html?_nkw=iphone+15&_udhi=700',subito:false},
-    filters:{minPrice:300,maxPrice:700,minMargin:null,platform:'EBAY',category:'smartphone',withPhoto:true,order:'price-asc',text:'256GB',scope:'all',features:{fastStorage:'exclude',goodCondition:'include'}},deepScan:false};
+    filters:{minPrice:300,maxPrice:700,minMargin:null,platform:'EBAY',category:'smartphone',withPhoto:true,order:'price-asc',text:'256GB',scope:'all',primaryIntent:'smartphone',facets:{usage:['smartphone'],condition:['refurbished','good']}},deepScan:false};
   await app.run(`importSearchProfile({target:{files:[{size:1000,text:async()=>${JSON.stringify(JSON.stringify(profile))}}],value:'profile'}})`);
   assert.equal(app.run('savedSearches[0].name'), 'Telefono ricondizionato');
   assert.equal(app.elements.get('market-query').value, 'iPhone 15 256GB');
@@ -371,8 +373,9 @@ test('an edited search profile restores query, custom URLs and filters', async (
   assert.equal(app.elements.get('category-filter').value, 'smartphone');
   assert.equal(app.elements.get('with-photo-only').checked, true);
   assert.equal(app.run('resultScope'), 'all');
-  assert.equal(app.run('featureFilters.fastStorage'), 'exclude');
-  assert.equal(app.run('featureFilters.goodCondition'), 'include');
+  assert.equal(app.run('primaryIntent'), 'smartphone');
+  assert.equal(app.run('JSON.stringify(guidedFilters.usage)'), '["smartphone"]');
+  assert.equal(app.run('JSON.stringify(guidedFilters.condition)'), '["refurbished","good"]');
   assert.equal(app.elements.get('deep-scan').checked, false);
   assert.equal(app.elements.get('source-mode-manual').checked, true);
 });
