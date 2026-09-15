@@ -36,7 +36,7 @@ Windows può mostrare un avviso perché lo script non è firmato digitalmente. V
 Ogni avvio mostra una configurazione guidata e lascia la dashboard pulita finché non hai deciso cosa cercare. Il percorso chiede, nell’ordine:
 
 1. la tipologia principale e il prodotto, per esempio gaming, workstation, AI/hosting, NAS, server, componenti, smartphone o rete;
-2. **Automatico**, per preparare tutti gli otto marketplace, oppure **Manuale**, per scegliere soltanto i siti e gli indirizzi desiderati;
+2. **Automatico**, per scegliere con un clic quali degli otto marketplace usare e lasciare a LootSniper la creazione dei link, oppure **Manuale**, per incollare gli indirizzi già filtrati;
 3. i filtri facoltativi, presentati uno alla volta e sempre saltabili;
 4. l’accettazione delle regole per l’uso locale del browser e dei propri account sui marketplace.
 
@@ -73,7 +73,7 @@ Per la diagnostica con terminale visibile usa `python launcher.py` e chiudi con 
 ## Esegui una ricerca
 
 1. Completa la configurazione iniziale e usa **Salta questo filtro** per ogni caratteristica che non vuoi imporre.
-2. In modalità **Automatico**, LootSniper prepara gli URL degli otto marketplace dalla descrizione scelta. In modalità **Manuale**, puoi lasciare vuoti i siti che non vuoi controllare e incollare almeno un URL completo.
+2. In modalità **Automatico**, spunta uno o più marketplace: LootSniper prepara soltanto i relativi URL dalla descrizione scelta. In modalità **Manuale**, puoi lasciare vuoti i siti che non vuoi controllare e incollare almeno un URL completo.
 3. Controlla il riepilogo compatto nella barra laterale. Le sorgenti dettagliate restano raccolte sotto **Modifica sorgenti e parole chiave**.
 4. In **Impostazioni → Ricerca** attiva **Più pagine** per leggere fino a cinque pagine per sito; disattivala per il controllo più rapido.
 5. Premi **Esegui ricerca**. WebView2 apre le sorgenti in pagine invisibili, usa la sessione privata dell’app e importa gli annunci in autonomia. Il riquadro **Attività** mostra sito e pagina in corso.
