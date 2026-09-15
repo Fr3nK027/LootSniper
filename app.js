@@ -45,6 +45,7 @@ let renderedLimit = 60;
 let quickQueryDirty = false;
 let resultView = readStorage('radar-result-view', 'list') === 'grid' ? 'grid' : 'list';
 let linkMode = readStorage('radar-link-mode', 'auto') === 'manual' ? 'manual' : 'auto';
+let automaticPlatforms = new Set(Object.keys(MARKET_HOSTS));
 let resultScope = readStorage('radar-result-scope', 'deals') === 'all' ? 'all' : 'deals';
 let serverSession = '';
 let primaryIntent = readStorage('radar-primary-intent', 'gaming');
@@ -55,7 +56,8 @@ const SESSION_KEY = 'radar-session';
 const SEARCH_PROFILE_FORMAT = 'lootsniper-search';
 const SEARCH_PROFILE_VERSION = 1;
 const SORT_ORDERS = ['deal-desc', 'margin-desc', 'price-asc', 'price-desc', 'vs-desc', 'newest'];
-const PLATFORM_LABELS = { VINTED: 'Vinted', EBAY: 'eBay', SUBITO: 'Subito' };
+const PLATFORM_LABELS = { VINTED: 'Vinted', EBAY: 'eBay', SUBITO: 'Subito', WALLAPOP: 'Wallapop', AMAZON: 'Amazon',
+  BACKMARKET: 'Back Market', REFURBED: 'Refurbed', CEX: 'CeX' };
 const CATEGORY_LABELS = { gaming: 'Portatili gaming', component: 'Componenti PC', nas: 'NAS', network: 'Router e rete', server: 'Server', smartphone: 'Smartphone', other: 'Altra elettronica' };
 const FACET_DEFINITIONS = {
   usage: { label: 'Tipologia', options: { gaming:'Gaming', workstation:'Workstation', ai:'AI / hosting', nas:'NAS', server:'Server', component:'Componenti', smartphone:'Smartphone', network:'Router / rete', other:'Altro' } },
@@ -158,7 +160,7 @@ async function initializeSearches() {
       serverRevision = result.revision;
     }
     setConnection(true);
-    $('sync-status').textContent = 'Sincronizzato con l’estensione';
+    $('sync-status').textContent = 'Sincronizzato con l’app locale';
   } catch (error) {
     $('sync-status').textContent = 'Ricerche salvate in questo browser';
     logMsg('Ricerche locali disponibili. Sincronizzazione: ' + error.message, 'log-warn');
@@ -173,7 +175,7 @@ function syncSavedSearches() {
     const result = await api('/api/searches', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ searches: snapshot, revision: serverRevision }) });
     serverRevision = result.revision;
-    $('sync-status').textContent = 'Sincronizzato con l’estensione';
+    $('sync-status').textContent = 'Sincronizzato con l’app locale';
   }).catch(error => {
     $('sync-status').textContent = 'Salvato solo in questo browser';
     logMsg(error.message, 'log-warn');
@@ -196,12 +198,12 @@ function setLinkMode(mode, announce = false) {
   $('source-details-caption').textContent = linkMode === 'manual' ? 'Incolla i link trovati sui siti' : 'Controlla i link creati dall’app';
   $('source-mode-help').textContent = linkMode === 'manual'
     ? 'Incolla i link di ricerca dei marketplace. Puoi lasciare vuoto un sito che non vuoi controllare.'
-    : 'Scrivi cosa cerchi: i link di Vinted, eBay e Subito vengono creati automaticamente.';
+    : 'Scrivi cosa cerchi: LootSniper prepara automaticamente tutti i marketplace supportati.';
   if (linkMode === 'manual') $('source-details').open = true;
   document.body.classList.toggle('manual-search', linkMode === 'manual');
   renderGuidedFilters();
   persist('radar-link-mode', linkMode);
-  if (announce) logMsg(linkMode === 'manual' ? 'Modalità manuale: incolla i link dei marketplace.' : 'Modalità automatica: scrivi il prodotto e LootSniper preparerà i tre link.', 'log-ok');
+  if (announce) logMsg(linkMode === 'manual' ? 'Modalità manuale: incolla i link dei marketplace.' : 'Modalità automatica: LootSniper prepara i marketplace selezionati.', 'log-ok');
 }
 function loadSavedSearch(search) {
   for (const platform of Object.keys(MARKET_HOSTS)) $('link-' + platform.toLowerCase()).value = search[platform.toLowerCase()] || '';
@@ -229,6 +231,7 @@ function loadSavedSearch(search) {
     if (customPlatforms.includes(platform) || (!search.query && search[platform.toLowerCase()])) manualPlatforms.add(platform);
   });
   const savedMode = search.linkMode === 'manual' || (search.linkMode !== 'auto' && manualPlatforms.size) ? 'manual' : 'auto';
+  if (savedMode === 'auto') automaticPlatforms = new Set(Object.keys(MARKET_HOSTS).filter(platform => search[platform.toLowerCase()]));
   setLinkMode(savedMode);
   updateSourceLinks(); persistFilters(); renderAllCards();
   logMsg('Ricerca “' + search.name + '” caricata.', 'log-ok');
@@ -245,6 +248,11 @@ function marketplaceSearchUrl(platform, query) {
   const encoded = encodeURIComponent(query);
   if (platform === 'EBAY') return 'https://www.ebay.it/sch/i.html?_nkw=' + encoded;
   if (platform === 'SUBITO') return 'https://www.subito.it/annunci-italia/vendita/usato/?q=' + encoded;
+  if (platform === 'WALLAPOP') return 'https://it.wallapop.com/app/search?keywords=' + encoded;
+  if (platform === 'AMAZON') return 'https://www.amazon.it/s?k=' + encoded;
+  if (platform === 'BACKMARKET') return 'https://www.backmarket.it/it-it/search?q=' + encoded;
+  if (platform === 'REFURBED') return 'https://www.refurbed.it/search/?query=' + encoded;
+  if (platform === 'CEX') return 'https://it.webuy.com/search?stext=' + encoded;
   return 'https://www.vinted.it/catalog?search_text=' + encoded;
 }
 function automaticQuery() {
@@ -266,7 +274,7 @@ function prepareQuickQuery(query) {
   const clean = String(query || '').trim().slice(0, 200);
   if (!clean) { $('market-query').focus(); return false; }
   $('market-query').value = clean;
-  Object.keys(MARKET_HOSTS).forEach(platform => { $('link-' + platform.toLowerCase()).value = marketplaceSearchUrl(platform, clean); });
+  Object.keys(MARKET_HOSTS).forEach(platform => { $('link-' + platform.toLowerCase()).value = automaticPlatforms.has(platform) ? marketplaceSearchUrl(platform, clean) : ''; });
   setLinkMode('auto');
   quickQueryDirty = false; manualPlatforms.clear();
   updateSourceLinks();
@@ -278,7 +286,7 @@ function getSources() {
   if (linkMode === 'auto' && !query) return [];
   const sources = Object.keys(MARKET_HOSTS).map(platform => {
     const input = $('link-' + platform.toLowerCase());
-    const url = linkMode === 'auto' ? marketplaceSearchUrl(platform, query) : input.value.trim();
+    const url = linkMode === 'auto' ? (automaticPlatforms.has(platform) ? marketplaceSearchUrl(platform, query) : '') : input.value.trim();
     input.setCustomValidity('');
     if (url && !safeUrl(url, platform)) {
       input.setCustomValidity('Inserisci un link HTTPS valido di ' + platform);
@@ -588,7 +596,7 @@ function renderAllCards() {
     ? resultScope === 'deals' && !dealCount
       ? 'Gli annunci raccolti non superano ancora le soglie di prezzo, dati e condizioni. Apri “Tutti gli annunci” per confrontarli.'
       : 'Prova a cambiare il budget o a rimuovere un filtro.'
-    : 'Cerca un NAS, un router, un portatile o un altro prodotto tecnologico; puoi anche importare gli annunci con l’estensione.');
+    : 'Cerca un NAS, un router, un portatile o un altro prodotto tecnologico: il browser integrato raccoglierà gli annunci.');
   const emptyAction = bombsArray.length ? 'reset' : 'guide';
   const emptyLabel = bombsArray.length ? 'Azzera i filtri' : 'Prepara la prima ricerca';
   $('results-grid').innerHTML = items.length ? items.slice(0, renderedLimit).map(cardTemplate).join('') :
@@ -708,16 +716,20 @@ function upsertListing(item) {
   return true;
 }
 function browserBridgeRequest(type, payload = {}, timeout = 1800) {
-  if (typeof window === 'undefined' || typeof window.postMessage !== 'function') return Promise.reject(new Error('Estensione non rilevata.'));
+  const desktop = typeof window !== 'undefined' ? window.chrome?.webview : null;
+  if (!desktop) return Promise.reject(new Error('Browser integrato non rilevato.'));
   const requestId = 'radar-' + Date.now() + '-' + (++browserBridgeSequence);
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => { window.removeEventListener('message', receive); reject(new Error('Estensione non rilevata.')); }, timeout);
-    function receive(event) {
-      if (event.source !== window || event.origin !== location.origin || event.data?.source !== 'lootsniper-extension' || event.data.requestId !== requestId) return;
-      clearTimeout(timer); window.removeEventListener('message', receive); resolve(event.data.result || { ok: false, error: 'Risposta dell’estensione non valida.' });
+    const timer = setTimeout(() => {
+      desktop.removeEventListener('message', receiveDesktop);
+      reject(new Error('Browser integrato non rilevato.'));
+    }, timeout);
+    function receiveDesktop(event) {
+      if (event.data?.source !== 'lootsniper-desktop' || event.data.requestId !== requestId) return;
+      clearTimeout(timer); desktop.removeEventListener('message', receiveDesktop); resolve(event.data.result || { ok: false, error: 'Risposta dell’app non valida.' });
     }
-    window.addEventListener('message', receive);
-    window.postMessage({ source: 'lootsniper-dashboard', requestId, type, ...payload }, location.origin);
+    desktop.addEventListener('message', receiveDesktop);
+    desktop.postMessage({ source: 'lootsniper-dashboard', requestId, type, ...payload });
   });
 }
 async function importBrowserListings(force = false) {
@@ -752,15 +764,15 @@ async function importBrowserListings(force = false) {
 }
 async function runBrowserScan(sources, deepScan, signal) {
   const started = await browserBridgeRequest('dashboard-run-current', { sources: sources.map(({ platform, url }) => ({ platform, url })), deepScan });
-  if (!started?.ok) throw new Error(started?.error || 'L’estensione non ha avviato la ricerca.');
-  logMsg('Estensione collegata: le ricerche vengono aperte in background nel tuo browser.', 'log-ok');
+  if (!started?.ok) throw new Error(started?.error || 'Il browser integrato non ha avviato la ricerca.');
+  logMsg('Browser integrato collegato: le ricerche vengono aperte in background.', 'log-ok');
   let changed = 0, lastStatus = null;
   while (!signal.aborted) {
     await new Promise(resolve => setTimeout(resolve, 1200));
     if (signal.aborted) break;
     const imported = await importBrowserListings(true); changed += imported.changed;
     const state = await browserBridgeRequest('dashboard-run-status', {}, 3000);
-    if (!state?.ok) throw new Error(state?.error || 'Stato dell’estensione non disponibile.');
+    if (!state?.ok) throw new Error(state?.error || 'Stato del browser integrato non disponibile.');
     lastStatus = state.status;
     $('scan-status').textContent = lastStatus?.message || 'Ricerca dal browser in corso…';
     setScanState('Ricerca protetta dal browser', (lastStatus?.message || 'Lettura delle pagine in corso…') + ' Puoi continuare a usare LootSniper.');
@@ -788,7 +800,7 @@ async function runScan() {
   try {
     const previousImports = await api('/api/import/latest?after=0', { signal: AbortSignal.timeout(8000) });
     importCursor = Number(previousImports.cursor) || 0;
-  } catch { /* La ricerca diretta può proseguire anche senza l’estensione. */ }
+  } catch { /* La ricerca dal browser può proseguire anche senza importazioni precedenti. */ }
   logMsg('Nuova ricerca: il radar precedente è stato azzerato.', 'log-ok');
   scanController = new AbortController();
   const signal = scanController.signal;
@@ -814,9 +826,9 @@ async function runScan() {
       return;
     } catch (error) {
       if (signal.aborted) return;
-      logMsg(error.message === 'Estensione non rilevata.' ?
-        'Estensione non rilevata: provo la lettura diretta, che alcuni marketplace possono bloccare.' :
-        'Ricerca tramite estensione non disponibile: ' + error.message + ' Provo la lettura diretta.', 'log-warn');
+      logMsg(/Browser integrato non rilevat/.test(error.message) ?
+        'Browser integrato non rilevato: provo la lettura diretta, che alcuni marketplace possono bloccare.' :
+        'Ricerca tramite browser non disponibile: ' + error.message + ' Provo la lettura diretta.', 'log-warn');
     }
     for (const source of sources) {
       let sourceItems = 0;
@@ -852,7 +864,7 @@ async function runScan() {
       if (signal.aborted) break;
     }
     setScanState(signal.aborted ? 'Ricerca interrotta' : errors || unreadable ? 'Ricerca completata con alcune fonti da verificare' : 'Ricerca completata',
-      changed + ' annunci aggiunti o aggiornati da ' + sourcesWithItems + ' fonti. ' + (errors || unreadable ? 'La lettura diretta è stata bloccata o non leggibile su ' + (errors + unreadable) + ' fonti: ricarica LootSniper Bridge per usare automaticamente il browser.' : processed.size ? 'Se non vedi annunci, prova ad allargare i filtri.' : 'Nessun annuncio trovato. Prova una parola chiave più generica.'), !!(errors || unreadable));
+      changed + ' annunci aggiunti o aggiornati da ' + sourcesWithItems + ' fonti. ' + (errors || unreadable ? 'La lettura diretta è stata bloccata o non leggibile su ' + (errors + unreadable) + ' fonti: avvia LootSniper.exe per usare il browser integrato.' : processed.size ? 'Se non vedi annunci, prova ad allargare i filtri.' : 'Nessun annuncio trovato. Prova una parola chiave più generica.'), !!(errors || unreadable));
     logMsg(signal.aborted ? 'Ricerca interrotta. I risultati raccolti sono salvati.' :
       'Ricerca diretta terminata: ' + changed + ' annunci aggiunti o aggiornati da ' + sourcesWithItems + ' fonti' +
       (errors || unreadable ? '; ' + (errors + unreadable) + ' fonti bloccate o non leggibili.' : '.'), errors || unreadable ? 'log-warn' : 'log-ok');

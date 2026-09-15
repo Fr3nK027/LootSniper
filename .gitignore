@@ -13,3 +13,7 @@ radar-discord.json
 radar-discord.json.tmp
 .runtime/
 .install-test/
+.tools/
+desktop/bin/
+desktop/obj/
+desktop/publish/

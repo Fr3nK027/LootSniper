@@ -137,6 +137,26 @@ class RadarApiTests(unittest.TestCase):
         self.assertEqual(saved["items"][0]["url"], "https://www.ebay.it/itm/123456789")
         self.assertTrue(self.imports.exists())
 
+    def test_integrated_browser_marketplaces_are_validated_and_canonicalized(self):
+        examples = {
+            "WALLAPOP": "https://it.wallapop.com/item/router-wifi-7-12345?tracking=1",
+            "AMAZON": "https://www.amazon.it/gp/product/B0ABCDEFGH?tag=tracking",
+            "BACKMARKET": "https://www.backmarket.it/it-it/p/iphone-15/abc123?tracking=1",
+            "REFURBED": "https://www.refurbed.it/p/lenovo-thinkpad/123/?tracking=1",
+            "CEX": "https://it.webuy.com/product-detail?id=123&tracking=1",
+        }
+        for platform, url in examples.items():
+            payload = {"platform": platform, "items": [{"title": "Prodotto test", "price": "199 EUR", "url": url}]}
+            code, result, _ = self.request("/api/import", payload)
+            self.assertEqual(code, 200, platform)
+            self.assertEqual(result["received"], 1, platform)
+        saved = self.request("/api/import/latest")[1]["items"]
+        self.assertEqual(len(saved), len(examples))
+        self.assertIn("https://www.amazon.it/dp/B0ABCDEFGH", {item["url"] for item in saved})
+        self.assertIn("https://it.webuy.com/product-detail?id=123", {item["url"] for item in saved})
+        with self.assertRaises(ValueError):
+            server.validate_url("https://fake-wallapop.com/item/1", "WALLAPOP")
+
     def test_invalid_imports(self):
         for payload in ([], {"platform": [], "items": []}, {"platform": "EBAY", "items": ["bad"]}):
             self.assertEqual(self.request("/api/import", payload)[0], 400)

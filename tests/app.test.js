@@ -281,13 +281,13 @@ test('the user explicitly chooses automatic generation or manually pasted links'
   app.elements.get('link-ebay').value='https://www.ebay.it/sch/i.html?_nkw=old';
   app.run('quickQueryDirty = true');
   assert.match(app.run('getSources()[1].url'), /RTX%204080/);
-  app.run("setLinkMode('manual'); ['vinted','ebay','subito'].forEach(key => $('link-' + key).value = '')");
+  app.run("setLinkMode('manual'); Object.keys(MARKET_HOSTS).forEach(key => $('link-' + key.toLowerCase()).value = '')");
   app.elements.get('link-ebay').value='https://www.ebay.it/sch/i.html?_nkw=custom';
   assert.equal(app.run('getSources().length'), 1);
   assert.match(app.run('getSources()[0].url'), /custom/);
   assert.equal(app.elements.get('auto-search-panel').hidden, true);
   app.run("setLinkMode('auto')");
-  assert.equal(app.run('getSources().length'), 3);
+  assert.equal(app.run('getSources().length'), 8);
   assert.equal(app.elements.get('auto-search-panel').hidden, false);
 });
 test('category shortcuts prepare an editable search on every marketplace', async () => {
@@ -356,7 +356,7 @@ test('executing a query generates the marketplace links and renders collected re
   assert.equal(app.elements.get('btn-scan').disabled, false);
   assert.equal(app.elements.get('btn-text').textContent, 'Esegui ricerca');
 });
-test('the dashboard prefers the browser extension and avoids blocked direct requests when available', async () => {
+test('the dashboard prefers the integrated browser and avoids blocked direct requests when available', async () => {
   const app = harness(); await app.run('initialSync');
   app.elements.get('market-query').value = 'Router Wi-Fi 7';
   app.run(`$('deep-scan').checked = false; quickQueryDirty = true;

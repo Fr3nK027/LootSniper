@@ -1,5 +1,9 @@
 {
-  "version": "8.2",
+  "version": "9.0",
+  "desktop": {
+    "file": "desktop/LootSniper-Desktop-win-x64.zip",
+    "sha256": "b0eb8acb7c6972abc5cf681a185cb3cb7d8a22bd33eda29353a5215e0a9a8868"
+  },
   "files": [
     ".gitignore",
     "README.md",
@@ -25,15 +29,10 @@
     "styles.css",
     "radar-core.js",
     "crea_pacchetto.py",
-    "browser-bridge/README.md",
-    "browser-bridge/manifest.json",
-    "browser-bridge/background.js",
-    "browser-bridge/content.js",
+    "desktop/LootSniper-Desktop-win-x64.zip",
     "browser-bridge/listings.js",
-    "browser-bridge/popup.html",
-    "browser-bridge/popup.js",
     "docs/images/avvio.svg",
-    "docs/images/estensione.svg",
+    "docs/images/browser-integrato.svg",
     "docs/images/dashboard.png",
     "docs/images/dashboard-notte.png",
     "docs/images/confronto.png",
@@ -43,7 +42,6 @@
     "tests/test_launcher.py",
     "tests/core.test.js",
     "tests/app.test.js",
-    "tests/extension.test.js",
     "tests/theme.test.js",
     "tests/markup.test.js",
     "tests/preview_server.py",

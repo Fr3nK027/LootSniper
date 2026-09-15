@@ -21,6 +21,10 @@ test('canonical identities remove trackers, slug aliases and fragments', () => {
   const filteredEbay = 'https://www.ebay.com/sch/i.html?_dcat=177&_fsrp=1&_nkw=gaming+laptop&RAM%2520Size=64%2520GB%7C32%2520GB&_udlo=1300&_udhi=2000';
   assert.equal(core.safeUrl(filteredEbay, 'EBAY'), filteredEbay);
   assert.equal(core.safeUrl('https://fake-ebay.com/sch/i.html?_nkw=laptop', 'EBAY'), '');
+  assert.ok(core.safeUrl('https://it.wallapop.com/app/search?keywords=router', 'WALLAPOP'));
+  assert.equal(core.safeUrl('https://fake-wallapop.com/app/search', 'WALLAPOP'), '');
+  assert.equal(core.canonicalUrl('https://amazon.it/gp/product/B0ABCDEFGH?tag=tracker', 'AMAZON'), 'https://www.amazon.it/dp/B0ABCDEFGH');
+  assert.equal(core.canonicalUrl('https://it.webuy.com/product-detail?id=123&x=1', 'CEX'), 'https://it.webuy.com/product-detail?id=123');
 });
 test('pagination starts at the supplied page and preserves filters', () => {
   const url = new URL(core.pageUrl('https://www.vinted.it/catalog?catalog[]=1&page=3#results', 'VINTED', 2));

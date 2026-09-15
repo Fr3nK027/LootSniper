@@ -1,7 +1,7 @@
 """Local LootSniper dashboard and validated, durable API. Standard library only."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, unquote, urlparse, urlunparse
+from urllib.parse import parse_qs, urlencode, unquote, urlparse, urlunparse
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 from urllib.error import HTTPError, URLError
 import argparse
@@ -21,15 +21,21 @@ from radar_lifecycle import DashboardLifetime
 ROOT = Path(__file__).resolve().parent
 SEARCHES_FILE = ROOT / "radar-searches.json"
 IMPORTS_FILE = ROOT / "radar-imports.json"
-PLATFORMS = {"VINTED": "vinted.it", "EBAY": "ebay.it", "SUBITO": "subito.it"}
-PLATFORM_DOMAINS = {"VINTED": {"vinted.it"}, "EBAY": {"ebay.it", "ebay.com"}, "SUBITO": {"subito.it"}}
+PLATFORMS = {"VINTED": "vinted.it", "EBAY": "ebay.it", "SUBITO": "subito.it", "WALLAPOP": "wallapop.com",
+             "AMAZON": "amazon.it", "BACKMARKET": "backmarket.it", "REFURBED": "refurbed.it", "CEX": "webuy.com"}
+PLATFORM_DOMAINS = {"VINTED": {"vinted.it"}, "EBAY": {"ebay.it", "ebay.com"}, "SUBITO": {"subito.it"},
+                    "WALLAPOP": {"wallapop.com"}, "AMAZON": {"amazon.it"}, "BACKMARKET": {"backmarket.it"},
+                    "REFURBED": {"refurbed.it"}, "CEX": {"webuy.com"}}
+CANONICAL_HOSTS = {"VINTED": "www.vinted.it", "EBAY": "www.ebay.it", "SUBITO": "www.subito.it",
+                   "WALLAPOP": "it.wallapop.com", "AMAZON": "www.amazon.it", "BACKMARKET": "www.backmarket.it",
+                   "REFURBED": "www.refurbed.it", "CEX": "it.webuy.com"}
 PLATFORM_HOSTS = {platform: {host for domain in domains for host in (domain, "www." + domain)}
                   for platform, domains in PLATFORM_DOMAINS.items()}
 ALLOWED_HOSTS = set().union(*PLATFORM_HOSTS.values())
 STATIC_FILES = {"radar usato 3 market.html", "app.js", "styles.css", "radar-core.js", "radar-runtime.js", "browser-bridge/listings.js", "experience.css", "radar-guide.js", "theme.js", "assets/lootsniper.svg", "assets/lootsniper.ico"}
 WORKSPACE_ID = hashlib.sha256(str(ROOT).casefold().encode()).hexdigest()[:16]
 PORT = 8765
-VERSION = "8.2"
+VERSION = "9.0"
 CATEGORY_FILTERS = {"", "gaming", "component", "nas", "network", "server", "smartphone", "other"}
 MAX_BODY = 2 * 1024 * 1024
 MAX_HTML = 10 * 1024 * 1024
@@ -42,8 +48,9 @@ def validate_url(value, platform=None):
     if not isinstance(value, str) or len(value) > 8192:
         raise ValueError("URL non valido")
     parsed = urlparse(value.strip())
-    hosts = PLATFORM_HOSTS[platform] if platform else ALLOWED_HOSTS
-    if (parsed.scheme != "https" or parsed.hostname not in hosts or parsed.username
+    domains = PLATFORM_DOMAINS[platform] if platform else set().union(*PLATFORM_DOMAINS.values())
+    host_allowed = parsed.hostname and any(parsed.hostname == domain or parsed.hostname.endswith("." + domain) for domain in domains)
+    if (parsed.scheme != "https" or not host_allowed or parsed.username
             or parsed.password or parsed.port not in (None, 443)):
         raise ValueError("Usa un link HTTPS del marketplace selezionato")
     return parsed
@@ -52,6 +59,7 @@ def validate_url(value, platform=None):
 def canonical_url(value, platform):
     parsed = validate_url(value, platform)
     path = parsed.path.rstrip("/")
+    query = ""
     if platform == "EBAY":
         match = re.search(r"/itm/(?:[^/]+/)?(\d+)", path)
         if match:
@@ -60,7 +68,17 @@ def canonical_url(value, platform):
         match = re.match(r"/items/(\d+)", path)
         if match:
             path = "/items/" + match[1]
-    return urlunparse(("https", "www." + PLATFORMS[platform], path, "", "", ""))
+    elif platform == "AMAZON":
+        match = re.search(r"/(?:dp|gp/product)/([A-Z0-9]{10})", path, re.IGNORECASE)
+        if match:
+            path = "/dp/" + match[1].upper()
+    elif platform == "CEX":
+        values = parse_qs(parsed.query)
+        for key in ("id", "p-item", "productId"):
+            if values.get(key):
+                query = urlencode({key: values[key][0]})
+                break
+    return urlunparse(("https", CANONICAL_HOSTS[platform], path, "", query, ""))
 
 
 def read_list(path):
@@ -392,7 +410,7 @@ class Handler(BaseHTTPRequestHandler):
                 html = body.decode(response.headers.get_content_charset() or "utf-8", errors="replace")
             self.send_json(200, {"html": html, "hasNext": has_next_page(html, target)})
         except HTTPError as error:
-            self.send_json(502, {"error": f"Il marketplace risponde HTTP {error.code}. Apri la ricerca nel browser e usa l’estensione."})
+            self.send_json(502, {"error": f"Il marketplace risponde HTTP {error.code}. Usa l’app desktop con browser integrato."})
             error.close()
         except (URLError, TimeoutError, OSError, ValueError) as error:
             self.send_json(502, {"error": f"Lettura non riuscita: {error}"})

@@ -23,7 +23,20 @@ try {
 } catch { $running = $null }
 $sha = [Security.Cryptography.SHA256]::Create()
 try { $targetId = ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($installRoot.TrimEnd('\').ToLowerInvariant())))).Replace('-','').ToLowerInvariant().Substring(0,16) } finally { $sha.Dispose() }
-if ($running -and $running.online -and ((-not $NoLaunch) -or $running.workspace -eq $targetId)) { throw 'LootSniper e aperto. Premi Arresta LootSniper nella dashboard, poi riavvia l installazione.' }
+if ($running -and $running.online -and $running.workspace -eq $targetId) {
+    Write-Host 'Chiudo automaticamente LootSniper per completare l aggiornamento...'
+    try { Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:8765/api/shutdown' -Headers @{ Origin = 'http://127.0.0.1:8765' } -ContentType 'application/json' -Body '{}' -TimeoutSec 3 | Out-Null } catch {}
+    $deadline = (Get-Date).AddSeconds(5)
+    do {
+        Start-Sleep -Milliseconds 200
+        $installedProcess = Get-Process -Name 'LootSniper' -ErrorAction SilentlyContinue | Where-Object {
+            try { $_.Path -and [IO.Path]::GetFullPath($_.Path).StartsWith($installRoot + [IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) } catch { $false }
+        }
+    } while ($installedProcess -and (Get-Date) -lt $deadline)
+    $installedProcess | Stop-Process -Force -ErrorAction SilentlyContinue
+} elseif ($running -and $running.online -and -not $NoLaunch) {
+    throw 'La porta 8765 e usata da un altra copia di LootSniper. Chiudila e riprova.'
+}
 $nativeArch = if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 } else { $env:PROCESSOR_ARCHITECTURE }
 $arch = switch ($nativeArch) { 'ARM64' {'arm64'} 'AMD64' {'amd64'} 'x86' {'win32'} default {throw 'Architettura Windows non supportata.'} }
 $pythonVersion = '3.14.7'
@@ -45,7 +58,7 @@ if (Test-Path -LiteralPath $python) {
     $ready = $LASTEXITCODE -eq 0 -and $detected -eq $pythonVersion
 }
 if (-not $ready) {
-    Write-Host '[1/3] Scarico Python privato da python.org (circa 12 MB)...'
+    Write-Host '[1/4] Scarico Python privato da python.org (circa 12 MB)...'
     $download = Join-Path ([IO.Path]::GetTempPath()) ('lootsniper-python-' + [guid]::NewGuid().ToString('N') + '.zip')
     try {
         $uri = "https://www.python.org/ftp/python/$pythonVersion/python-$pythonVersion-embed-$arch.zip"
@@ -56,10 +69,10 @@ if (-not $ready) {
     } finally {
         if (Test-Path -LiteralPath $download) { Remove-Item -LiteralPath $download -Force }
     }
-} else { Write-Host '[1/3] Python privato gia pronto: nessun download necessario.' }
+} else { Write-Host '[1/4] Python privato gia pronto: nessun download necessario.' }
 # The isolated interpreter can import the application from its parent directory.
 [IO.File]::WriteAllText((Join-Path $runtimeRoot 'python314._pth'), "python314.zip`n.`nDLLs`nLib`n..`n", [Text.Encoding]::ASCII)
-Write-Host '[2/3] Preparo il programma e conservo gli archivi esistenti...'
+Write-Host '[2/4] Preparo il programma e conservo gli archivi esistenti...'
 if (-not $sourceRoot.Equals($installRoot,[StringComparison]::OrdinalIgnoreCase)) {
     foreach ($name in $manifest.files) {
         $target = Join-Path $installRoot $name
@@ -75,13 +88,35 @@ if (-not $sourceRoot.Equals($installRoot,[StringComparison]::OrdinalIgnoreCase))
 & $python -I -c 'import server, radar_discord, radar_lifecycle'
 if ($LASTEXITCODE -ne 0) { throw 'Il runtime non riesce ad avviare il programma. Controlla che Windows sia aggiornato e riprova.' }
 Write-Host 'Verifica programma: OK'
-Write-Host '[3/3] Creo i collegamenti...'
+$desktopPackage = Join-Path $installRoot ([string]$manifest.desktop.file)
+if (-not (Test-Path -LiteralPath $desktopPackage -PathType Leaf)) { throw 'Pacchetto desktop mancante. Estrai nuovamente lo ZIP di LootSniper.' }
+if ((Get-FileHash -LiteralPath $desktopPackage -Algorithm SHA256).Hash.ToLowerInvariant() -ne ([string]$manifest.desktop.sha256).ToLowerInvariant()) {
+    throw 'Il pacchetto LootSniper.exe non supera la verifica SHA-256.'
+}
+Expand-Archive -LiteralPath $desktopPackage -DestinationPath $installRoot -Force
+Remove-Item -LiteralPath $desktopPackage -Force
+if (-not (Test-Path -LiteralPath (Join-Path $installRoot 'LootSniper.exe') -PathType Leaf)) { throw 'LootSniper.exe non e stato installato correttamente.' }
+Write-Host '[3/4] Controllo il browser Microsoft WebView2...'
+$webViewReady = $false
+foreach ($registryPath in @('HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\*','HKCU:\Software\Microsoft\EdgeUpdate\Clients\*')) {
+    if (Get-ItemProperty $registryPath -ErrorAction SilentlyContinue | Where-Object { $_.name -eq 'Microsoft Edge WebView2 Runtime' }) { $webViewReady = $true; break }
+}
+if (-not $webViewReady) {
+    Write-Host 'Scarico WebView2 Evergreen dal sito Microsoft...'
+    $webViewInstaller = Join-Path ([IO.Path]::GetTempPath()) ('lootsniper-webview2-' + [guid]::NewGuid().ToString('N') + '.exe')
+    try {
+        Invoke-WebRequest -UseBasicParsing -Uri 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile $webViewInstaller -TimeoutSec 180
+        $webViewProcess = Start-Process -FilePath $webViewInstaller -ArgumentList '/silent /install' -Wait -PassThru -WindowStyle Hidden
+        if ($webViewProcess.ExitCode -ne 0) { throw ('Installazione WebView2 non riuscita. Codice: ' + $webViewProcess.ExitCode) }
+    } finally { if (Test-Path -LiteralPath $webViewInstaller) { Remove-Item -LiteralPath $webViewInstaller -Force } }
+} else { Write-Host 'WebView2 gia disponibile: nessun download necessario.' }
+Write-Host '[4/4] Creo i collegamenti...'
 if (-not $NoShortcuts) {
     $shell = New-Object -ComObject WScript.Shell
     foreach ($folder in @([Environment]::GetFolderPath('Desktop'), [Environment]::GetFolderPath('Programs'))) {
         $shortcut = $shell.CreateShortcut((Join-Path $folder 'LootSniper.lnk'))
-        $shortcut.TargetPath = Join-Path $env:WINDIR 'System32\wscript.exe'
-        $shortcut.Arguments = '"' + (Join-Path $installRoot 'avvia radar.vbs') + '"'
+        $shortcut.TargetPath = Join-Path $installRoot 'LootSniper.exe'
+        $shortcut.Arguments = ''
         $shortcut.WorkingDirectory = $installRoot
         $shortcut.IconLocation = (Join-Path $installRoot 'assets\lootsniper.ico') + ',0'
         $shortcut.Description = 'LootSniper - trova e confronta tecnologia usata'
@@ -96,4 +131,4 @@ if (-not $NoShortcuts) {
     $uninstallShortcut.Save()
 }
 Write-Host 'Installazione completata. Avvia LootSniper dal collegamento sul desktop.' -ForegroundColor Green
-if (-not $NoLaunch) { Start-Process -FilePath (Join-Path $env:WINDIR 'System32\wscript.exe') -ArgumentList ('"' + (Join-Path $installRoot 'avvia radar.vbs') + '"') -WindowStyle Hidden }
+if (-not $NoLaunch) { Start-Process -FilePath (Join-Path $installRoot 'LootSniper.exe') -WorkingDirectory $installRoot }

@@ -224,10 +224,14 @@ function parseMoney(value) {
   return Number.isFinite(result) && result > 0 && result <= 100000 ? result : null;
 }
 function extractPrices(text) { return parseMoney(text); }
-const MARKET_HOSTS = { VINTED: 'vinted.it', EBAY: 'ebay.it', SUBITO: 'subito.it' };
-const MARKET_HOST_ALIASES = { VINTED: ['vinted.it'], EBAY: ['ebay.it', 'ebay.com'], SUBITO: ['subito.it'] };
+const MARKET_HOSTS = { VINTED: 'vinted.it', EBAY: 'ebay.it', SUBITO: 'subito.it', WALLAPOP: 'wallapop.com',
+  AMAZON: 'amazon.it', BACKMARKET: 'backmarket.it', REFURBED: 'refurbed.it', CEX: 'webuy.com' };
+const MARKET_HOST_ALIASES = { VINTED: ['vinted.it'], EBAY: ['ebay.it', 'ebay.com'], SUBITO: ['subito.it'],
+  WALLAPOP: ['wallapop.com'], AMAZON: ['amazon.it'], BACKMARKET: ['backmarket.it'], REFURBED: ['refurbed.it'], CEX: ['webuy.com'] };
+const MARKET_CANONICAL_HOSTS = { VINTED:'www.vinted.it', EBAY:'www.ebay.it', SUBITO:'www.subito.it', WALLAPOP:'it.wallapop.com',
+  AMAZON:'www.amazon.it', BACKMARKET:'www.backmarket.it', REFURBED:'www.refurbed.it', CEX:'it.webuy.com' };
 function marketplaceHostAllowed(hostname, platform) {
-  return Array.isArray(MARKET_HOST_ALIASES[platform]) && MARKET_HOST_ALIASES[platform].some(domain => hostname === domain || hostname === 'www.' + domain);
+  return Array.isArray(MARKET_HOST_ALIASES[platform]) && MARKET_HOST_ALIASES[platform].some(domain => hostname === domain || hostname.endsWith('.' + domain));
 }
 function safeUrl(value, platform) {
   try {
@@ -241,7 +245,8 @@ function canonicalUrl(value, platform) {
   if (!Object.hasOwn(MARKET_HOSTS, platform)) return '';
   if (!safeUrl(value, platform)) return '';
   const url = new URL(value);
-  url.hostname = 'www.' + MARKET_HOSTS[platform];
+  const originalSearch = new Map(url.searchParams.entries());
+  url.hostname = MARKET_CANONICAL_HOSTS[platform];
   url.search = ''; url.hash = '';
   url.pathname = url.pathname.replace(/\/$/, '');
   if (platform === 'EBAY') {
@@ -250,6 +255,13 @@ function canonicalUrl(value, platform) {
   } else if (platform === 'VINTED') {
     const match = url.pathname.match(/^\/items\/(\d+)/);
     if (match) url.pathname = '/items/' + match[1];
+  } else if (platform === 'AMAZON') {
+    const match = url.pathname.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
+    if (match) url.pathname = '/dp/' + match[1].toUpperCase();
+  } else if (platform === 'CEX') {
+    const identity = ['id', 'p-item', 'productId'].find(key => originalSearch.has(key));
+    const value = identity ? originalSearch.get(identity) : '';
+    if (identity) url.searchParams.set(identity, value);
   }
   return url.href;
 }

@@ -74,6 +74,7 @@ $('btn-shutdown').addEventListener('click', async () => {
     scanController?.abort();
     persistResults();
     await api('/api/shutdown', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    if (window.chrome?.webview) window.chrome.webview.postMessage({source:'lootsniper-dashboard',type:'dashboard-close-app'});
     radarStopped = true;
     clearInterval(heartbeatTimer); clearInterval(discordTimer);
     $('connection-status').textContent = 'LootSniper arrestato';

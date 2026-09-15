@@ -25,7 +25,7 @@ class UninstallerTests(unittest.TestCase):
     def run_uninstaller(self, script, install, parent, no_shortcuts=True, shortcut_roots=None):
         command = [
             "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script),
-            "-InstallDir", str(install), "-Yes"
+            "-InstallDir", str(install), "-Yes", "-BrowserDataDir", str(Path(parent) / "BrowserData")
         ]
         if no_shortcuts:
             command.append("-NoShortcuts")

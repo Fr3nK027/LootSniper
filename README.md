@@ -1,6 +1,6 @@
 # LootSniper · radar tecnologico in locale
 
-Cerca e confronta portatili gaming, NAS, router e altra tecnologia usata su **Vinted, eBay e Subito**. Il programma apre automaticamente una dashboard locale nel browser.
+Cerca e confronta portatili gaming, componenti, NAS, server, router, smartphone e altra tecnologia su **Vinted, eBay, Subito, Wallapop, Amazon, Back Market, Refurbed e CeX**. LootSniper 9 apre una vera finestra Windows con browser WebView2 integrato: non richiede estensioni.
 
 **Questa versione si esegue esclusivamente in locale.** GitHub distribuisce il progetto e la guida: non devi attivare GitHub Pages, configurare Supabase o inserire chiavi API. Per cercare nuovi annunci serve una connessione Internet; l’archivio già salvato si può consultare anche senza connessione.
 
@@ -14,15 +14,16 @@ Cerca e confronta portatili gaming, NAS, router e altra tecnologia usata su **Vi
 
 1. Estrai completamente lo ZIP scaricato.
 2. Apri la cartella estratta e fai doppio clic su **Installa LootSniper.cmd**.
-3. Attendi il messaggio **Installazione completata**: si aprirà la dashboard e troverai **LootSniper** sul desktop e nel menu Start.
+3. Attendi il messaggio **Installazione completata**: si aprirà `LootSniper.exe` e troverai **LootSniper** sul desktop e nel menu Start.
 
 Non servono privilegi di amministratore, Python, pip o Node.js. L’installer:
 
 - installa il programma in `%LOCALAPPDATA%\Programs\LootSniper`;
 - scarica una copia privata e isolata di Python 3.14.7 dal sito ufficiale Python;
 - controlla il file scaricato con l’hash SHA-256 pubblicato da Python.org prima di estrarlo;
-- crea i collegamenti con l’icona LootSniper;
-- avvia dashboard e server senza lasciare finestre CMD nella barra delle applicazioni.
+- installa l’app Windows autonoma e controlla Microsoft Edge WebView2;
+- scarica automaticamente WebView2 dal sito Microsoft solo se non è già presente;
+- crea i collegamenti con l’icona LootSniper e avvia app e server senza finestre CMD.
 
 Il runtime rimane dentro l’installazione di LootSniper: non modifica il Python già presente sul PC e non aggiunge variabili di sistema. I componenti dell’app usano soltanto la libreria standard, quindi non vengono scaricati pacchetti da fonti aggiuntive. Dettagli: [pacchetto Python incorporabile](https://docs.python.org/3/using/windows.html#the-embeddable-package) e [Python 3.14.7](https://www.python.org/downloads/release/python-3147/).
 
@@ -35,11 +36,11 @@ Windows può mostrare un avviso perché lo script non è firmato digitalmente. V
 Ogni avvio mostra una configurazione guidata e lascia la dashboard pulita finché non hai deciso cosa cercare. Il percorso chiede, nell’ordine:
 
 1. la tipologia principale e il prodotto, per esempio gaming, workstation, AI/hosting, NAS, server, componenti, smartphone o rete;
-2. **Automatico**, per far creare a LootSniper i tre link, oppure **Manuale**, per incollare gli indirizzi configurati direttamente su Vinted, eBay e Subito;
+2. **Automatico**, per preparare tutti gli otto marketplace, oppure **Manuale**, per scegliere soltanto i siti e gli indirizzi desiderati;
 3. i filtri facoltativi, presentati uno alla volta e sempre saltabili;
 4. l’accettazione delle regole per l’uso locale del browser e dei propri account sui marketplace.
 
-LootSniper non chiede né conserva password, cookie o codici di accesso. Login, CAPTCHA e verifiche rimangono nel browser e vanno completati personalmente. Il percorso si può riaprire in qualsiasi momento con **Nuova ricerca guidata**.
+LootSniper non chiede né legge password o codici di accesso. Login, cookie e sessioni restano nel profilo WebView2 privato in `%LOCALAPPDATA%\LootSniper\BrowserProfile`; CAPTCHA e verifiche vanno completati personalmente. Il percorso si può riaprire in qualsiasi momento con **Nuova ricerca guidata**.
 
 Il pulsante **Giorno / Notte** accanto al logo cambia l’aspetto della dashboard e ricorda la scelta. Al primo avvio LootSniper segue automaticamente il tema di Windows.
 
@@ -47,9 +48,9 @@ Il pulsante **Giorno / Notte** accanto al logo cambia l’aspetto della dashboar
 
 ![Avvio guidato di LootSniper](docs/images/guida.png)
 
-In seguito usa soltanto il collegamento **LootSniper** sul desktop o nel menu Start: server e dashboard si aprono automaticamente. LootSniper impedisce l’avvio contemporaneo di più server sulla stessa porta, così la dashboard comunica sempre con una sola versione. Non occorre cercare o digitare `127.0.0.1:8765`; quell’indirizzo serve solo come riferimento tecnico per la versione attuale.
+In seguito usa soltanto il collegamento **LootSniper** sul desktop o nel menu Start. L’app avvia il server locale e mostra la dashboard nella propria finestra. Non devi aprire Chrome, installare componenti dal Web Store o digitare `127.0.0.1:8765`.
 
-Per chiudere subito premi **Arresta LootSniper** nella barra laterale. Chiudendo tutte le schede della dashboard, il server termina automaticamente dopo circa 45 secondi; se il browser si arresta senza avvisare, la pulizia avviene dopo circa 3 minuti. Non rimane un CMD da chiudere.
+Per chiudere subito premi **Arresta LootSniper** oppure chiudi la finestra. L’app arresta anche il server e le pagine di scansione; non rimane un CMD da chiudere.
 
 ### Uso portatile e avvio dal terminale
 
@@ -72,10 +73,10 @@ Per la diagnostica con terminale visibile usa `python launcher.py` e chiudi con 
 ## Esegui una ricerca
 
 1. Completa la configurazione iniziale e usa **Salta questo filtro** per ogni caratteristica che non vuoi imporre.
-2. In modalità **Automatico**, LootSniper prepara gli URL di Vinted, eBay e Subito dalla descrizione scelta. In modalità **Manuale**, puoi lasciare vuoto un sito e incollare almeno un URL completo; per eBay sono accettati sia `ebay.it` sia `ebay.com`, compresi i link lunghi con filtri avanzati.
+2. In modalità **Automatico**, LootSniper prepara gli URL degli otto marketplace dalla descrizione scelta. In modalità **Manuale**, puoi lasciare vuoti i siti che non vuoi controllare e incollare almeno un URL completo.
 3. Controlla il riepilogo compatto nella barra laterale. Le sorgenti dettagliate restano raccolte sotto **Modifica sorgenti e parole chiave**.
-4. In **Impostazioni → Ricerca** attiva **Più pagine** per leggere fino a 20 pagine per sito.
-5. Premi **Esegui ricerca**. Se **LootSniper Bridge 1.4** è caricato, l’app apre le sorgenti in schede non attive, usa la normale sessione del browser e importa gli annunci in autonomia. Il riquadro **Attività** mostra sempre quale metodo è in uso.
+4. In **Impostazioni → Ricerca** attiva **Più pagine** per leggere fino a cinque pagine per sito; disattivala per il controllo più rapido.
+5. Premi **Esegui ricerca**. WebView2 apre le sorgenti in pagine invisibili, usa la sessione privata dell’app e importa gli annunci in autonomia. Il riquadro **Attività** mostra sito e pagina in corso.
 6. Per fermare il lavoro premi **Interrompi ricerca**: quanto raccolto rimane salvato.
 
 Ogni volta che premi **Esegui ricerca**, LootSniper svuota il radar precedente e riparte da zero. Anche un nuovo avvio azzera annunci, preferiti, filtri, importazioni e l’elenco temporaneo delle ricerche. Tema, configurazione Discord e file ricerca già scaricati rimangono disponibili.
@@ -84,7 +85,7 @@ I contatori **Bombe verificate**, **Questa sessione** e **Da tenere d’occhio**
 
 Per l’elettronica generica, LootSniper evidenzia soltanto caratteristiche scritte nell’annuncio: memoria, archiviazione, numero di bay, standard Wi-Fi, velocità di rete, 5G e Dual SIM. Nella tabella di confronto le stime non disponibili restano esplicitamente indicate come **confronto manuale**.
 
-eBay, Subito e Vinted possono bloccare la lettura diretta o caricare gli annunci soltanto nel browser. LootSniper prova quindi prima Bridge e usa la lettura diretta come ripiego. Se compare **Estensione non rilevata**, ricarica l’estensione dalla pagina di Chrome/Edge e ripeti la ricerca.
+I marketplace possono bloccare le richieste HTTP o caricare i risultati tramite JavaScript. Per questo `LootSniper.exe` usa prima il browser incorporato. Se un sito mostra login, consenso o verifica, apri il suo collegamento dalla sezione sorgenti: apparirà una finestra WebView2 visibile con lo stesso profilo; completa il passaggio e ripeti la ricerca.
 
 ### Salva una ricerca
 
@@ -105,7 +106,7 @@ Nel JSON, `sourceMode` può essere `auto` oppure `manual`. Modifica liberamente 
 
 Questo formato non dipende dal tipo di prodotto: puoi creare profili per PC gaming, componenti, NAS, server, cellulari, router, monitor e altra elettronica. Conserva virgolette, virgole e parentesi del JSON; se la sintassi non è valida, LootSniper rifiuta il file e mostra il motivo senza cambiare la ricerca corrente.
 
-L’elenco interno è condiviso con l’estensione soltanto durante la sessione e viene azzerato al riavvio. I file scaricati non vengono cancellati: sono il modo previsto per riutilizzare una ricerca in una sessione futura.
+L’elenco interno viene usato dal browser integrato soltanto durante la sessione e viene azzerato al riavvio. I file scaricati non vengono cancellati: sono il modo previsto per riutilizzare una ricerca in una sessione futura.
 
 ## Valuta, filtra e confronta
 
@@ -116,7 +117,7 @@ L’elenco interno è condiviso con l’estensione soltanto durante la sessione 
 - Passa da **Bombe** a **Tutti gli annunci** per separare le opportunità classificate dal catalogo raccolto.
 - Filtra per marketplace, budget massimo e differenza minima.
 - Filtra per categoria: portatili gaming, componenti PC, NAS, router e rete, server, smartphone o altra elettronica. Il menu mostra quanti annunci sono presenti in ogni categoria.
-- Il menu Marketplace mostra quanti annunci arrivano da Vinted, eBay e Subito, così sai subito dove si concentra il catalogo.
+- Il menu Marketplace mostra quanti annunci arrivano da ciascuno degli otto siti, così sai subito dove si concentra il catalogo.
 - Imposta un prezzo minimo e massimo per restringere il catalogo a una fascia precisa; entrambi vengono conservati nei file ricerca riutilizzabili.
 - Se il prezzo minimo supera il massimo, il catalogo indica subito come correggere la fascia invece di confonderla con una ricerca senza risultati.
 - Attiva **Solo con foto** quando vuoi escludere gli annunci senza immagine; anche questa scelta viene conservata nel file ricerca.
@@ -129,7 +130,7 @@ L’elenco interno è condiviso con l’estensione soltanto durante la sessione 
 - Apri rapidamente un’offerta sul marketplace premendo la sua immagine, il titolo oppure **Vedi l’annuncio**.
 - Leggi il **Punteggio bomba**, il valore usato stimato, il prezzo nuovo indicativo, il margine percentuale, l’affidabilità dei dati e le condizioni dichiarate. Apri poi **Cosa verificare prima di comprare** per vedere quali informazioni mancano.
 
-Le scorciatoie **Componenti PC**, **NAS**, **Server**, **Smartphone** e **Router** preparano subito i tre marketplace. La parola chiave resta modificabile prima dell’avvio, quindi puoi precisare marca, modello, capacità o qualsiasi altra caratteristica.
+Le scorciatoie **Componenti PC**, **NAS**, **Server**, **Smartphone** e **Router** preparano subito tutti i marketplace. La parola chiave resta modificabile prima dell’avvio.
 
 Per confrontare due o tre annunci:
 
@@ -143,38 +144,13 @@ Il **Punteggio bomba** combina lo sconto rispetto al valore usato stimato, la co
 
 **Stime, prezzo nuovo indicativo e indice specifiche sono calcoli locali:** non sono quotazioni aggiornate, benchmark Versus o una garanzia di rivendita. La scheda offre **Verifica su Versus** per aprire una ricerca esterna senza attribuire a Versus dati che il sito non ha fornito all’app. Controlla sempre configurazione, condizioni, venditore, spedizione e commissioni nell’annuncio originale. I rialzi e ribassi si basano sui prezzi osservati da LootSniper, non su uno storico completo del marketplace.
 
-## Installa l’estensione locale
+## Browser integrato
 
-L’estensione è facoltativa per consultare la dashboard, ma è raccomandata per la ricerca automatica: consente al pulsante **Esegui ricerca** di aprire in background le pagine dei marketplace, leggerle con la sessione del browser e richiuderle al termine.
+La versione 9 usa Microsoft Edge WebView2, mantenuto e aggiornato da Microsoft. Il profilo è separato da Chrome ed Edge personali e viene usato soltanto da LootSniper. Premendo il collegamento di un marketplace si apre una finestra interna visibile per login, consenso cookie o verifiche; chiudendola torni alla dashboard. Le scansioni successive riutilizzano la sessione locale.
 
-![Schema di installazione dell’estensione e importazione in LootSniper](docs/images/estensione.svg)
+![LootSniper.exe con browser WebView2 e otto marketplace](docs/images/browser-integrato.svg)
 
-1. Avvia LootSniper e lascia aperta la dashboard.
-2. Su Chrome apri `chrome://extensions`; su Edge apri `edge://extensions`.
-3. Attiva **Modalità sviluppatore**.
-4. Premi **Carica estensione non pacchettizzata** o **Carica decompressa**, secondo il browser.
-5. Seleziona la cartella **browser-bridge** del progetto, quella che contiene `manifest.json`.
-6. Dopo un aggiornamento di LootSniper premi **Ricarica** nella scheda di LootSniper Bridge e ricarica anche la dashboard.
-7. Torna alla dashboard e premi **Esegui ricerca**: la ricerca corrente parte automaticamente nel browser.
-8. Per una singola pagina già aperta puoi comunque usare **LootSniper Bridge → Importa questa pagina**.
-9. Torna alla dashboard: gli annunci importati vengono controllati periodicamente e le opportunità aggiornate compaiono nell’archivio.
-
-Non devi esportare un file dalla pagina del marketplace: questa estensione invia gli annunci direttamente al server locale. Se un sito chiede login o verifiche, completali personalmente prima di riprovare.
-
-La procedura di caricamento è documentata anche nella [guida ufficiale Chrome](https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world#load-unpacked).
-
-### Ricerche automatiche
-
-1. Salva almeno una ricerca nella dashboard.
-2. Apri il popup dell’estensione.
-3. Seleziona i marketplace.
-4. Attiva **Usa tutte le ricerche** oppure seleziona quelle desiderate nell’elenco.
-5. Imposta **Controlla ogni 15 minuti e all’avvio** secondo la tua preferenza: nella configurazione iniziale è attivo.
-6. Premi **Salva automazione**.
-7. Per partire subito premi **Esegui ricerche selezionate**.
-8. Per fermarti premi **Interrompi ricerca**.
-
-Il browser, almeno una scheda della dashboard e il server locale devono restare aperti. Le schede dell’automazione vengono aperte in background; i controlli possono essere ritardati durante la sospensione del PC. L’estensione non avvia il server. Senza **Usa tutte le ricerche**, un elenco non selezionato non avvia alcuna ricerca.
+Il motore apre una sorgente alla volta per contenere memoria e carico dei marketplace, blocca il download di immagini e video nelle pagine invisibili e chiude ogni pagina dopo l’analisi. Titolo, prezzo, indirizzo, testo visibile e URL dell’immagine vengono passati al server locale; password e campi di accesso non vengono letti.
 
 ## Notifiche Discord: pubblica le bombe nel tuo canale
 
@@ -189,7 +165,7 @@ Questa funzione è facoltativa e inizialmente disattivata. Non serve creare un b
 5. Imposta la **Differenza stimata minima (€)**: per esempio 200 invia soltanto nuove opportunità con almeno 200 € di differenza tra stima e prezzo.
 6. Attiva **Pubblica le nuove bombe** e premi **Salva Discord**.
 7. Premi **Invia messaggio di prova** e verifica il messaggio nel canale. Il pulsante usa il webhook già salvato.
-8. Avvia una ricerca oppure importa nuovi annunci con l’estensione. Solo le nuove opportunità classificate come bombe vengono pubblicate con titolo, link, prezzo, valore stimato, margine, punteggio, affidabilità dei dati e condizioni dichiarate.
+8. Avvia una ricerca con il browser integrato. Solo le nuove opportunità classificate come bombe vengono pubblicate con titolo, link, prezzo, valore stimato, margine, punteggio, affidabilità dei dati e condizioni dichiarate.
 
 Gli annunci già presenti nell’archivio prima dell’attivazione non vengono pubblicati in blocco. Gli invii confermati vengono ricordati per gli ultimi 10.000 identificativi, anche dopo un riavvio; le normali variazioni di prezzo non producono nuovi messaggi. La coda conserva fino a 200 invii, rispetta le attese richieste da Discord e riprova gli errori di rete temporanei fino a tre tentativi. Lo stato degli invii compare sotto i pulsanti. Le menzioni automatiche come @everyone sono disabilitate.
 
@@ -213,10 +189,11 @@ Se non hai annunci ma vuoi salvare le ricerche, usa **Archivio → Backup comple
 
 | Dato | Dove si trova |
 | --- | --- |
-| Elenco temporaneo condiviso con l’estensione | `radar-searches.json`, azzerato a ogni avvio |
+| Elenco temporaneo usato dall’app | `radar-searches.json`, azzerato a ogni avvio |
 | Profili di ricerca modificabili | File `LootSniper-*.json` nella cartella download scelta nel browser |
-| Annunci importati dall’estensione | `radar-imports.json`, azzerato a ogni avvio |
-| Risultati, preferiti, filtri e recupero archivio | Memoria del browser, azzerata per ogni nuova sessione |
+| Annunci importati dal browser integrato | `radar-imports.json`, azzerato a ogni avvio |
+| Risultati, preferiti, filtri e recupero archivio | Profilo WebView2 locale, azzerato per ogni nuova sessione |
+| Login, cookie e sessioni marketplace | `%LOCALAPPDATA%\LootSniper\BrowserProfile` |
 | Configurazione privata Discord, coda e invii confermati | `radar-discord.json` |
 | Diagnostica del server e dell’avvio nascosto | `radar-server.log`, `radar-avvio.log` |
 | Backup esportati | Cartella download scelta nel browser |
@@ -229,7 +206,7 @@ I file dati vengono creati quando necessari. Un progetto appena scaricato parte 
 2. Premi **Arresta LootSniper** nella vecchia dashboard.
 3. Scarica ed estrai il nuovo ZIP.
 4. Esegui di nuovo **Installa LootSniper.cmd**. L’installer aggiorna i file del programma, riusa il runtime già verificato e conserva la configurazione Discord. Ricerche e importazioni ripartono vuote al successivo avvio.
-5. Ricarica l’estensione dalla pagina delle estensioni del browser e poi ricarica le schede dei marketplace.
+5. Riapri **LootSniper**: eseguibile, server e parser sono già aggiornati insieme.
 
 Per conservare annunci o preferiti oltre la sessione, usa **Esporta backup** prima di chiudere e **Importa backup** nella sessione successiva.
 
@@ -239,7 +216,7 @@ Per conservare annunci o preferiti oltre la sessione, usa **Esporta backup** pri
 2. Scrivi **S** quando viene richiesta la conferma.
 3. Attendi il messaggio **LootSniper è stato disinstallato completamente**.
 
-Il disinstallatore prova prima l’arresto normale, poi chiude automaticamente gli eventuali processi Python, PowerShell, CMD o WScript avviati dalla cartella di LootSniper. Rimuove programma, runtime Python privato, ricerche, importazioni, log e configurazione Discord. Cerca inoltre i collegamenti sia nel Desktop standard sia nei Desktop spostati in OneDrive, li elimina dal menu Start e aggiorna Esplora file per far sparire subito l’icona.
+Il disinstallatore prova prima l’arresto normale, poi chiude automaticamente `LootSniper.exe` e gli eventuali processi di supporto avviati dalla cartella. Rimuove programma, runtime Python, profilo WebView2, login locali, ricerche, importazioni, log e configurazione Discord. Cerca inoltre i collegamenti sia nel Desktop standard sia nei Desktop spostati in OneDrive.
 
 I backup che hai esportato in Download o in altre cartelle rimangono disponibili. La cartella ZIP estratta manualmente da GitHub non fa parte dell’installazione: puoi eliminarla normalmente dopo la disinstallazione.
 
@@ -247,26 +224,25 @@ I backup che hai esportato in Download o in altre cartelle rimangono disponibili
 
 | Problema | Cosa fare |
 | --- | --- |
-| Il download automatico non parte | Controlla la connessione e che `python.org` non sia bloccato da firewall o proxy; poi riavvia `Installa LootSniper.cmd`. |
+| Il download automatico non parte | Controlla che `python.org` e `microsoft.com` non siano bloccati da firewall o proxy; poi riavvia `Installa LootSniper.cmd`. |
 | L’installer segnala che LootSniper è aperto | Premi **Arresta LootSniper** nella dashboard e riprova. |
 | Dopo la disinstallazione resta l’icona sul Desktop | Usa il disinstallatore 6.6 o successivo: controlla anche OneDrive e forza l’aggiornamento del Desktop. |
 | Windows mostra un avviso | Verifica di aver scaricato dal repository ufficiale, poi usa **Ulteriori informazioni → Esegui comunque**. |
 | Python non trovato nella modalità portatile | Installa Python 3.10+ e verifica `py -3 --version`, oppure usa l’installer automatico. |
-| L’avvio nascosto segnala un errore | Leggi `radar-avvio.log` e `radar-server.log` nella cartella del progetto. |
-| Script VBS non disponibile sul PC | Apri un terminale nella cartella ed esegui `py -3 launcher.py --background`; poi chiudi il terminale. |
+| `LootSniper.exe` non si apre | Reinstalla l’app e verifica Windows Update; WebView2 viene controllato automaticamente dall’installer. |
 | Porta 8765 occupata | Arresta la vecchia copia; non avviare due copie diverse insieme. |
 | Server offline | Chiudi la scheda e riapri LootSniper dal collegamento sul desktop o nel menu Start. |
 | Discord non invia | Salva un webhook valido, prova il messaggio di test e controlla soglia e stato. La dashboard deve essere aperta per rilevare nuove bombe. |
 | Nessuna opportunità trovata | Azzera i filtri, controlla i link e il riquadro Attività; verifica se gli annunci rientrano nei criteri hardware e prezzo. |
-| Un marketplace non viene letto | Apri la ricerca nel browser e usa l’estensione dopo il caricamento. |
-| L’estensione non risponde | Ricarica l’estensione e le schede dei marketplace; controlla che il server sia avviato. |
+| Un marketplace non viene letto | Apri il suo collegamento nella sezione sorgenti, completa eventuale consenso, login o verifica nella finestra interna e ripeti la ricerca. |
+| Il browser integrato non risponde | Chiudi LootSniper, riaprilo e controlla che Microsoft Edge WebView2 sia aggiornato. |
 | Ricerche non sincronizzate | Ricarica la dashboard a server attivo. Se compare, usa **Recupera ricerche dalla copia locale**. |
 | Archivio apparentemente vuoto | Dopo un riavvio o una nuova ricerca è normale: LootSniper riparte da zero. Per recuperare dati precedenti importa un backup esportato. |
 | File dati danneggiato | Il file viene conservato. Arresta il server e ripristina una copia valida; non cancellarlo senza un backup. |
 
 ## Pubblicare o contribuire
 
-Il repository contiene codice, estensione, test e immagini della guida. Non occorre configurare un servizio cloud.
+Il repository contiene l’app Windows, il server locale, il browser integrato, test e immagini della guida. Non occorre configurare un servizio cloud.
 
 **Per preparare una copia distribuibile**, dalla cartella del progetto esegui:
 
@@ -284,7 +260,7 @@ Python usa soltanto la libreria standard. Node.js serve esclusivamente per i tes
 
 ```text
 python -B -m unittest discover -s tests -v
-node --test tests/core.test.js tests/app.test.js tests/extension.test.js tests/theme.test.js
+node --test tests/core.test.js tests/app.test.js tests/theme.test.js tests/markup.test.js
 ```
 
 Per un’anteprima con annunci sintetici, isolata dai dati reali:
@@ -297,16 +273,16 @@ Apri [la dashboard di test](http://127.0.0.1:8766/) o [i test del parser](http:/
 
 | File o cartella | Funzione |
 | --- | --- |
-| `Installa LootSniper.cmd`, `installa.ps1`, `distribuzione.json` | Installazione Windows, runtime verificato e collegamenti |
+| `Installa LootSniper.cmd`, `installa.ps1`, `distribuzione.json` | Installazione Windows, dipendenze verificate e collegamenti |
 | `Disinstalla LootSniper.cmd`, `disinstalla.ps1` | Disinstallazione completa e rimozione dei dati locali dell’app |
-| `avvia radar.vbs`, `avvia radar locale.bat` | Avvio Windows nascosto |
-| `launcher.py` | Avvio, controllo del server e apertura del browser |
+| `desktop/` | Sorgente WinForms/WebView2 e pacchetto di `LootSniper.exe` |
+| `launcher.py`, `avvia radar.vbs` | Modalità portatile precedente per sviluppatori |
 | `server.py` | Server locale e gestione degli archivi |
 | `radar usato 3 market.html`, `styles.css`, `experience.css`, `app.js`, `radar-guide.js` | Dashboard e avvio guidato |
 | `radar-core.js` | Prezzi, validazione e stime hardware |
 | `radar-runtime.js`, `radar_lifecycle.py` | Impostazioni, presenza delle dashboard e arresto automatico |
 | `radar_discord.py` | Configurazione privata, coda e invio delle notifiche Discord |
-| `browser-bridge/` | Estensione Chrome/Edge |
+| `browser-bridge/listings.js` | Parser condiviso degli annunci usato dal browser integrato |
 | `assets/` | Icona del programma |
 | `docs/images/` | Immagini della guida |
 | `tests/` | Test automatici e anteprima isolata |

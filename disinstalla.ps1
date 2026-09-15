@@ -2,7 +2,8 @@ param(
     [string]$InstallDir = (Join-Path $env:LOCALAPPDATA 'Programs\LootSniper'),
     [switch]$Yes,
     [switch]$NoShortcuts,
-    [string[]]$ShortcutRoots = @()
+    [string[]]$ShortcutRoots = @(),
+    [string]$BrowserDataDir = (Join-Path $env:LOCALAPPDATA 'LootSniper')
 )
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -88,7 +89,7 @@ function Get-ProtectedProcessIds {
 
 function Stop-LootSniperProcesses {
     $protectedIds = Get-ProtectedProcessIds
-    $allowedNames = @('python.exe', 'pythonw.exe', 'py.exe', 'wscript.exe', 'cscript.exe', 'cmd.exe', 'powershell.exe', 'pwsh.exe')
+    $allowedNames = @('lootsniper.exe', 'msedgewebview2.exe', 'python.exe', 'pythonw.exe', 'py.exe', 'wscript.exe', 'cscript.exe', 'cmd.exe', 'powershell.exe', 'pwsh.exe')
     $stoppedIds = New-Object 'Collections.Generic.HashSet[int]'
     foreach ($process in (Get-Process -ErrorAction SilentlyContinue)) {
         if ($protectedIds.Contains([int]$process.Id)) { continue }
@@ -103,7 +104,9 @@ function Stop-LootSniperProcesses {
     foreach ($process in $processes) {
         if ($protectedIds.Contains([int]$process.ProcessId) -or $stoppedIds.Contains([int]$process.ProcessId) -or
             $allowedNames -notcontains ([string]$process.Name).ToLowerInvariant()) { continue }
-        if (([string]$process.CommandLine).IndexOf($installRoot, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+        $commandLine = [string]$process.CommandLine
+        if ($commandLine.IndexOf($installRoot, [StringComparison]::OrdinalIgnoreCase) -ge 0 -or
+            $commandLine.IndexOf($BrowserDataDir, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
             Write-Host ('Chiusura processo LootSniper: ' + $process.Name)
             Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
             [void]$stoppedIds.Add([int]$process.ProcessId)
@@ -167,5 +170,13 @@ if (Test-Path -LiteralPath $installRoot) {
     if ($lastError -and (Test-Path -LiteralPath $installRoot)) { throw $lastError }
 }
 if (Test-Path -LiteralPath $installRoot) { throw 'La cartella di LootSniper non e stata rimossa completamente.' }
+$browserData = $BrowserDataDir
+if (Test-Path -LiteralPath $browserData) {
+    $browserDataFull = [IO.Path]::GetFullPath($browserData)
+    $localRoot = [IO.Path]::GetFullPath($env:LOCALAPPDATA).TrimEnd('\') + '\'
+    if ($browserDataFull.StartsWith($localRoot, [StringComparison]::OrdinalIgnoreCase) -or $ShortcutRoots.Count) {
+        Remove-Item -LiteralPath $browserDataFull -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
 if (-not $NoShortcuts) { Remove-LootSniperShortcuts; Refresh-Desktop }
 Write-Host 'LootSniper e stato disinstallato completamente.' -ForegroundColor Green
