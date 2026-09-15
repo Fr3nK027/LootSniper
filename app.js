@@ -38,6 +38,7 @@ if (!ignoredImports || typeof ignoredImports !== 'object' || Array.isArray(ignor
 let importVersions = new Map();
 let importCursor = 0;
 let lastImportError = '';
+let browserBridgeSequence = 0;
 let undoArchive = readStorage('radar-undo', null);
 if (!undoArchive || !Array.isArray(undoArchive.results) || !Array.isArray(undoArchive.favorites)) undoArchive = null;
 let renderedLimit = 60;
@@ -706,12 +707,26 @@ function upsertListing(item) {
   if (!previous && result.evalData.isDeal && typeof notifyOpportunity === 'function') notifyOpportunity(result);
   return true;
 }
-async function importBrowserListings() {
-  if (radarStopped || importing || scanController || document.hidden) return;
+function browserBridgeRequest(type, payload = {}, timeout = 1800) {
+  if (typeof window === 'undefined' || typeof window.postMessage !== 'function') return Promise.reject(new Error('Estensione non rilevata.'));
+  const requestId = 'radar-' + Date.now() + '-' + (++browserBridgeSequence);
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => { window.removeEventListener('message', receive); reject(new Error('Estensione non rilevata.')); }, timeout);
+    function receive(event) {
+      if (event.source !== window || event.origin !== location.origin || event.data?.source !== 'lootsniper-extension' || event.data.requestId !== requestId) return;
+      clearTimeout(timer); window.removeEventListener('message', receive); resolve(event.data.result || { ok: false, error: 'Risposta dell’estensione non valida.' });
+    }
+    window.addEventListener('message', receive);
+    window.postMessage({ source: 'lootsniper-dashboard', requestId, type, ...payload }, location.origin);
+  });
+}
+async function importBrowserListings(force = false) {
+  const summary = { changed: 0, analyzed: 0 };
+  if (radarStopped || importing || (!force && (scanController || document.hidden))) return summary;
   importing = true;
   try {
     const payload = await api('/api/import/latest?after=' + importCursor, { signal: AbortSignal.timeout(8000) });
-    if (radarStopped) return;
+    if (radarStopped) return summary;
     setConnection(true);
     lastImportError = '';
     let changed = 0, analyzed = 0;
@@ -725,6 +740,7 @@ async function importBrowserListings() {
     importCursor = Number(payload.cursor) || 0;
     if (analyzed) renderAllCards();
     if (changed) { persistResults(); logMsg(changed + ' annunci importati o aggiornati dal browser.', 'log-ok'); }
+    summary.changed = changed; summary.analyzed = analyzed;
   } catch (error) {
     if (radarStopped) return;
     setConnection(!!error.status);
@@ -732,6 +748,29 @@ async function importBrowserListings() {
     lastImportError = error.message;
   }
   finally { importing = false; }
+  return summary;
+}
+async function runBrowserScan(sources, deepScan, signal) {
+  const started = await browserBridgeRequest('dashboard-run-current', { sources: sources.map(({ platform, url }) => ({ platform, url })), deepScan });
+  if (!started?.ok) throw new Error(started?.error || 'L’estensione non ha avviato la ricerca.');
+  logMsg('Estensione collegata: le ricerche vengono aperte in background nel tuo browser.', 'log-ok');
+  let changed = 0, lastStatus = null;
+  while (!signal.aborted) {
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    if (signal.aborted) break;
+    const imported = await importBrowserListings(true); changed += imported.changed;
+    const state = await browserBridgeRequest('dashboard-run-status', {}, 3000);
+    if (!state?.ok) throw new Error(state?.error || 'Stato dell’estensione non disponibile.');
+    lastStatus = state.status;
+    $('scan-status').textContent = lastStatus?.message || 'Ricerca dal browser in corso…';
+    setScanState('Ricerca protetta dal browser', (lastStatus?.message || 'Lettura delle pagine in corso…') + ' Puoi continuare a usare LootSniper.');
+    if (!state.running) {
+      const finalImport = await importBrowserListings(true); changed += finalImport.changed;
+      return { handled: true, changed, status: lastStatus || {} };
+    }
+  }
+  await browserBridgeRequest('dashboard-stop-current', {}, 1500).catch(() => {});
+  return { handled: true, changed, aborted: true, status: lastStatus || {} };
 }
 function extractListings(doc, source) { return RadarListings.collect(doc, source); }
 function setScanState(title, body, help = false) {
@@ -758,9 +797,29 @@ async function runScan() {
   $('results-grid').setAttribute('aria-busy', 'true');
   const processed = new Set();
   const deepScan = $('deep-scan').checked;
-  let errors = 0, changed = 0, unreadable = 0;
+  let errors = 0, changed = 0, unreadable = 0, sourcesWithItems = 0;
   try {
+    try {
+      const browserResult = await runBrowserScan(sources, deepScan, signal);
+      if (browserResult.aborted) {
+        setScanState('Ricerca interrotta', browserResult.changed + ' annunci importati prima dell’interruzione.');
+        logMsg('Ricerca del browser interrotta. I risultati raccolti sono salvati.', 'log-warn');
+      } else {
+        const failures = Number(browserResult.status.failures) || 0;
+        const detail = browserResult.changed + ' annunci aggiunti o aggiornati dal browser.' +
+          (failures ? ' ' + failures + ' fonti non hanno esposto annunci leggibili.' : ' Tutte le fonti sono state elaborate.');
+        setScanState(failures ? 'Ricerca completata con alcune fonti da verificare' : 'Ricerca completata dal browser', detail, failures > 0);
+        logMsg('Ricerca browser terminata: ' + detail, failures ? 'log-warn' : 'log-ok');
+      }
+      return;
+    } catch (error) {
+      if (signal.aborted) return;
+      logMsg(error.message === 'Estensione non rilevata.' ?
+        'Estensione non rilevata: provo la lettura diretta, che alcuni marketplace possono bloccare.' :
+        'Ricerca tramite estensione non disponibile: ' + error.message + ' Provo la lettura diretta.', 'log-warn');
+    }
     for (const source of sources) {
+      let sourceItems = 0;
       for (let page = 1; page <= (deepScan ? 20 : 1); page++) {
         if (signal.aborted) break;
         const status = source.platform + ' · pagina ' + page;
@@ -778,21 +837,25 @@ async function runScan() {
             processed.add(item.url); totalAnalyzed++; newItems++;
             changed += Number(upsertListing(item));
           }
+          sourceItems += newItems;
           persistResults(); renderAllCards();
-          if (!items.length) unreadable++;
-          if (!items.length) logMsg(source.platform + ': nessun annuncio leggibile. Puoi usare l’estensione sulla pagina aperta.', 'log-warn');
+          if (!items.length && sourceItems === 0) {
+            unreadable++; logMsg(source.platform + ': la prima pagina non espone annunci leggibili alla modalità diretta.', 'log-warn');
+          }
           if (!newItems || !payload.hasNext) break;
         } catch (error) {
           if (signal.aborted) break;
           errors++; logMsg(source.platform + ': ' + error.message, 'log-err'); break;
         }
       }
+      if (sourceItems) { sourcesWithItems++; logMsg(source.platform + ': ' + sourceItems + ' annunci unici letti.', 'log-ok'); }
       if (signal.aborted) break;
     }
     setScanState(signal.aborted ? 'Ricerca interrotta' : errors || unreadable ? 'Ricerca completata con alcune fonti da verificare' : 'Ricerca completata',
-      changed + ' annunci aggiunti o aggiornati. ' + (errors || unreadable ? 'Alcune pagine non sono accessibili o leggibili: apri la ricerca nel browser e usa l’estensione.' : processed.size ? 'Se non vedi annunci, prova ad allargare i filtri. Vengono salvate le opportunità sotto la stima indicativa.' : 'Nessun annuncio trovato. Prova una parola chiave più generica.'), !!(errors || unreadable));
+      changed + ' annunci aggiunti o aggiornati da ' + sourcesWithItems + ' fonti. ' + (errors || unreadable ? 'La lettura diretta è stata bloccata o non leggibile su ' + (errors + unreadable) + ' fonti: ricarica LootSniper Bridge per usare automaticamente il browser.' : processed.size ? 'Se non vedi annunci, prova ad allargare i filtri.' : 'Nessun annuncio trovato. Prova una parola chiave più generica.'), !!(errors || unreadable));
     logMsg(signal.aborted ? 'Ricerca interrotta. I risultati raccolti sono salvati.' :
-      'Ricerca terminata: ' + changed + ' annunci aggiunti o aggiornati' + (errors ? ', ' + errors + ' fonti non raggiungibili.' : '.'), errors ? 'log-warn' : 'log-ok');
+      'Ricerca diretta terminata: ' + changed + ' annunci aggiunti o aggiornati da ' + sourcesWithItems + ' fonti' +
+      (errors || unreadable ? '; ' + (errors + unreadable) + ' fonti bloccate o non leggibili.' : '.'), errors || unreadable ? 'log-warn' : 'log-ok');
   } finally {
     persistResults(); scanController = null; $('btn-scan').disabled = radarStopped; $('btn-clear').disabled = false;
     $('btn-scan').classList.remove('loading'); $('btn-text').textContent = 'Esegui ricerca';

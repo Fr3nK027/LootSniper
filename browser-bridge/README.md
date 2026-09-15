@@ -8,12 +8,13 @@ Importa gli annunci caricati nelle ricerche Vinted.it, eBay.it e Subito.it in Lo
 2. Apri la gestione estensioni di Chrome o Edge e abilita la modalità sviluppatore.
 3. Scegli **Carica non pacchettizzata** e seleziona questa cartella.
 4. Se era già installata, premi **Ricarica** sulla scheda dell'estensione.
-5. Ricarica anche le schede dei marketplace già aperte, per attivare il parser aggiornato.
-6. Apri il popup di LootSniper e premi **Importa questa pagina**. Il popup conferma solo gli annunci effettivamente salvati.
+5. Ricarica la dashboard e le schede dei marketplace già aperte, per attivare il collegamento e il parser aggiornati.
+6. Torna alla dashboard e premi **Esegui ricerca**: Bridge apre automaticamente le sorgenti della ricerca corrente in schede non attive.
+7. Per una pagina già aperta puoi usare il popup e premere **Importa questa pagina**. Il popup conferma solo gli annunci effettivamente salvati.
 
 ## Ricerche automatiche
 
-Le ricerche salvate nella dashboard vengono lette dal server locale.
+La ricerca corrente può essere avviata direttamente dalla dashboard. Le ricerche salvate vengono inoltre lette dal server locale per i controlli periodici.
 
 - Le selezioni dei marketplace e delle ricerche vengono ricordate.
 - **Usa tutte le ricerche** comprende anche nuove ricerche aggiunte successivamente.

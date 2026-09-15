@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LootSniper Bridge",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Importa e aggiorna gli annunci visibili su Vinted, eBay e Subito in LootSniper.",
   "permissions": ["activeTab", "alarms", "storage"],
   "host_permissions": [
@@ -24,7 +24,8 @@
         "https://*.ebay.it/*",
         "https://*.ebay.com/*",
         "https://*.subito.it/*",
-        "https://*.vinted.it/*"
+        "https://*.vinted.it/*",
+        "http://127.0.0.1:8765/*"
       ],
       "js": ["listings.js", "content.js"],
       "run_at": "document_idle"

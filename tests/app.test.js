@@ -356,6 +356,28 @@ test('executing a query generates the marketplace links and renders collected re
   assert.equal(app.elements.get('btn-scan').disabled, false);
   assert.equal(app.elements.get('btn-text').textContent, 'Esegui ricerca');
 });
+test('the dashboard prefers the browser extension and avoids blocked direct requests when available', async () => {
+  const app = harness(); await app.run('initialSync');
+  app.elements.get('market-query').value = 'Router Wi-Fi 7';
+  app.run(`$('deep-scan').checked = false; quickQueryDirty = true;
+    runBrowserScan = async () => ({handled:true,changed:4,status:{failures:0}});`);
+  await app.run('runScan()');
+  assert.equal(app.requests.some(request => String(request.url).startsWith('/api/fetch')), false);
+  assert.equal(app.elements.get('scan-feedback-title').textContent, 'Ricerca completata dal browser');
+  assert.match(app.elements.get('scan-feedback-body').textContent, /4 annunci/);
+});
+test('an empty page after readable results is a normal end of pagination', async () => {
+  const app = harness(); await app.run('initialSync');
+  app.run(`setLinkMode('manual'); $('link-vinted').value='https://www.vinted.it/catalog?search_text=laptop'; $('deep-scan').checked=true;
+    let collectedPage=0; runBrowserScan=async()=>{throw new Error('Estensione non rilevata.')};
+    api=async path=>path.startsWith('/api/import/latest')?{items:[],cursor:0}:{html:'<html></html>',hasNext:collectedPage===0};
+    extractListings=()=>++collectedPage===1?[{platform:'VINTED',url:'https://www.vinted.it/items/123',title:'Laptop RTX 4070',price:'800 EUR',updatedAt:Date.now()}]:[];`);
+  await app.run('runScan()');
+  assert.equal(app.run('bombsArray.length'), 1);
+  assert.equal(app.elements.get('scan-feedback-title').textContent, 'Ricerca completata');
+  assert.match(app.elements.get('scan-feedback-body').textContent, /da 1 fonti/);
+  assert.doesNotMatch(app.elements.get('scan-feedback-body').textContent, /bloccata|non leggibile/);
+});
 test('an edited search profile restores query, custom URLs and filters', async () => {
   const app = harness(); await app.run('initialSync');
   const profile = {format:'lootsniper-search',version:1,name:'Telefono ricondizionato',query:'iPhone 15 256GB',

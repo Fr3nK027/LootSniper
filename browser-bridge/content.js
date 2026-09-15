@@ -1,4 +1,5 @@
 'use strict';
+const DASHBOARD_ORIGIN = 'http://127.0.0.1:8765';
 function collectListings() {
   const host = location.hostname.replace(/^www\./, '');
   const platform = { 'ebay.it': 'EBAY', 'ebay.com': 'EBAY', 'vinted.it': 'VINTED', 'subito.it': 'SUBITO' }[host];
@@ -13,3 +14,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }).catch(error => sendResponse({ ok: false, error: error.message }));
   return true;
 });
+
+if (location.origin === DASHBOARD_ORIGIN) {
+  window.addEventListener('message', event => {
+    const message = event.data;
+    if (event.source !== window || event.origin !== DASHBOARD_ORIGIN || message?.source !== 'lootsniper-dashboard'
+        || typeof message.requestId !== 'string' || !['dashboard-run-current', 'dashboard-run-status', 'dashboard-stop-current'].includes(message.type)) return;
+    chrome.runtime.sendMessage({ type: message.type, sources: message.sources, deepScan: message.deepScan }).then(result => {
+      window.postMessage({ source: 'lootsniper-extension', requestId: message.requestId, result }, DASHBOARD_ORIGIN);
+    }).catch(error => {
+      window.postMessage({ source: 'lootsniper-extension', requestId: message.requestId,
+        result: { ok: false, error: error.message || 'Estensione non disponibile.' } }, DASHBOARD_ORIGIN);
+    });
+  });
+}

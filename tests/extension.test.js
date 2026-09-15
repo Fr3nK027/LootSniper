@@ -69,3 +69,24 @@ test('live status is not confused by stale stored running state',async()=>{
   const bg=harness({settings:{automationStatus:{running:true}}});
   assert.equal((await bg.message({type:'get-run-status'})).running,false);
 });
+test('dashboard commands accept only validated marketplace sources from localhost',async()=>{
+  const bg=harness();
+  const sender={url:'http://127.0.0.1:8765/',tab:{id:1}};
+  const invalid=await bg.message({type:'dashboard-run-current',sources:[{platform:'EBAY',url:'https://evil.example'}]},sender);
+  assert.equal(invalid.ok,false);
+  assert.equal(bg.run("cleanCurrentSources([{platform:'EBAY',url:'https://www.ebay.com/sch/i.html?_nkw=laptop'}]).length"),1);
+  assert.equal(bg.run("cleanCurrentSources([{platform:'EBAY',url:'https://fake-ebay.com/sch/i.html'}]).length"),0);
+});
+test('the localhost content bridge forwards a dashboard command and returns its result',async()=>{
+  const sent=[], posted=[], listeners={};
+  const page={addEventListener:(type,fn)=>{listeners[type]=fn;},postMessage:value=>posted.push(value)};
+  const context=vm.createContext({window:page,location:{origin:'http://127.0.0.1:8765',hostname:'127.0.0.1',href:'http://127.0.0.1:8765/'},
+    RadarListings:{collect:()=>[]},chrome:{runtime:{onMessage:event(),sendMessage:async message=>{sent.push(message);return{ok:true};}}}});
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../browser-bridge/content.js'),'utf8'),context);
+  listeners.message({source:page,origin:'http://127.0.0.1:8765',data:{source:'lootsniper-dashboard',requestId:'one',type:'dashboard-run-status'}});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(sent[0].type,'dashboard-run-status');
+  assert.equal(posted[0].source,'lootsniper-extension');
+  assert.equal(posted[0].requestId,'one');
+  assert.equal(posted[0].result.ok,true);
+});

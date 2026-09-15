@@ -73,13 +73,13 @@ async function collectTab(tabId) {
   if (stopRequested) return { count: 0 };
   throw lastError || new Error('La pagina non risponde.');
 }
-async function processSource(source) {
+async function processSource(source, maxPages = MAX_PAGES) {
   const tab = await chrome.tabs.create({ url: 'about:blank', active: false });
   automationTabId = tab.id;
   let imported = 0, updated = 0;
   const fingerprints = new Set();
   try {
-    for (let page = 1; page <= MAX_PAGES && !stopRequested; page++) {
+    for (let page = 1; page <= maxPages && !stopRequested; page++) {
       await status({ running: true, message: source.name + ' · ' + source.platform + ' · pagina ' + page });
       await navigateTab(tab.id, pageUrl(source.url, source.platform, page));
       if (stopRequested) break;
@@ -92,6 +92,34 @@ async function processSource(source) {
     }
   } finally { await chrome.tabs.remove(tab.id).catch(() => {}); automationTabId = null; }
   return { imported, updated };
+}
+function cleanCurrentSources(values) {
+  if (!Array.isArray(values) || !values.length || values.length > 3) return [];
+  const known = new Set(), clean = [];
+  for (const value of values) {
+    if (!value || !Object.hasOwn(HOSTS, value.platform) || !validSource(value.url, value.platform) || known.has(value.url)) return [];
+    known.add(value.url); clean.push({ platform: value.platform, url: value.url, name: 'Ricerca corrente' });
+  }
+  return clean;
+}
+async function runCurrentSources(sources, deepScan) {
+  automationRunning = true; stopRequested = false;
+  let imported = 0, updated = 0, failures = 0;
+  try {
+    await status({ running: true, mode: 'current', message: 'Avvio ricerca dal browser…' });
+    for (const source of sources) {
+      if (stopRequested) break;
+      try {
+        const result = await processSource(source, deepScan ? MAX_PAGES : 1);
+        imported += result.imported; updated += result.updated;
+      } catch (error) { failures++; console.warn('Radar:', source.platform, error.message); }
+    }
+    await status({ running: false, mode: 'current', imported, updated, failures,
+      message: stopRequested ? 'Ricerca interrotta.' : imported + ' nuovi · ' + updated + ' aggiornati' +
+        (failures ? ' · ' + failures + ' fonti non leggibili' : '') });
+  } catch (error) {
+    await status({ running: false, mode: 'current', error: true, message: error.message || 'Ricerca dal browser non riuscita.' });
+  } finally { automationRunning = false; stopRequested = false; }
 }
 async function runSavedSearches() {
   if (automationRunning) return;
@@ -135,6 +163,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendToRadar(message).then(result => sendResponse({ ok: true, ...result }))
       .catch(error => sendResponse({ ok: false, error: error.message || 'Server offline.' }));
     return true;
+  }
+  const dashboardSender = (() => { try { return new URL(sender.url || '').origin === API; } catch { return false; } })();
+  if (dashboardSender && message?.type === 'dashboard-run-current') {
+    const sources = cleanCurrentSources(message.sources);
+    if (!sources.length) { sendResponse({ ok: false, error: 'Sorgenti della dashboard non valide.' }); return; }
+    if (automationRunning) { sendResponse({ ok: false, error: 'Una ricerca del browser è già in corso.' }); return; }
+    runCurrentSources(sources, message.deepScan === true); sendResponse({ ok: true }); return;
+  }
+  if (dashboardSender && message?.type === 'dashboard-run-status') {
+    chrome.storage.local.get({ automationStatus: null }).then(value => sendResponse({ ok: true, running: automationRunning, status: value.automationStatus }));
+    return true;
+  }
+  if (dashboardSender && message?.type === 'dashboard-stop-current') {
+    stopRequested = true;
+    if (automationTabId !== null) chrome.tabs.remove(automationTabId).catch(() => {});
+    sendResponse({ ok: true }); return;
   }
   // Commands can only come from extension pages, not a marketplace content script.
   if (sender.tab) return;

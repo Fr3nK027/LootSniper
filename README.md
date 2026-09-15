@@ -75,7 +75,7 @@ Per la diagnostica con terminale visibile usa `python launcher.py` e chiudi con 
 2. In modalità **Automatico**, LootSniper prepara gli URL di Vinted, eBay e Subito dalla descrizione scelta. In modalità **Manuale**, puoi lasciare vuoto un sito e incollare almeno un URL completo; per eBay sono accettati sia `ebay.it` sia `ebay.com`, compresi i link lunghi con filtri avanzati.
 3. Controlla il riepilogo compatto nella barra laterale. Le sorgenti dettagliate restano raccolte sotto **Modifica sorgenti e parole chiave**.
 4. In **Impostazioni → Ricerca** attiva **Più pagine** per leggere fino a 20 pagine per sito.
-5. Premi **Esegui ricerca** e segui il messaggio di stato. Il riquadro **Attività** contiene i dettagli tecnici.
+5. Premi **Esegui ricerca**. Se **LootSniper Bridge 1.4** è caricato, l’app apre le sorgenti in schede non attive, usa la normale sessione del browser e importa gli annunci in autonomia. Il riquadro **Attività** mostra sempre quale metodo è in uso.
 6. Per fermare il lavoro premi **Interrompi ricerca**: quanto raccolto rimane salvato.
 
 Ogni volta che premi **Esegui ricerca**, LootSniper svuota il radar precedente e riparte da zero. Anche un nuovo avvio azzera annunci, preferiti, filtri, importazioni e l’elenco temporaneo delle ricerche. Tema, configurazione Discord e file ricerca già scaricati rimangono disponibili.
@@ -84,7 +84,7 @@ I contatori **Bombe verificate**, **Questa sessione** e **Da tenere d’occhio**
 
 Per l’elettronica generica, LootSniper evidenzia soltanto caratteristiche scritte nell’annuncio: memoria, archiviazione, numero di bay, standard Wi-Fi, velocità di rete, 5G e Dual SIM. Nella tabella di confronto le stime non disponibili restano esplicitamente indicate come **confronto manuale**.
 
-Alcuni marketplace possono bloccare la lettura diretta o caricare gli annunci soltanto nel browser. In questi casi usa l’estensione descritta al passo 6.
+eBay, Subito e Vinted possono bloccare la lettura diretta o caricare gli annunci soltanto nel browser. LootSniper prova quindi prima Bridge e usa la lettura diretta come ripiego. Se compare **Estensione non rilevata**, ricarica l’estensione dalla pagina di Chrome/Edge e ripeti la ricerca.
 
 ### Salva una ricerca
 
@@ -145,7 +145,7 @@ Il **Punteggio bomba** combina lo sconto rispetto al valore usato stimato, la co
 
 ## Installa l’estensione locale
 
-L’estensione è facoltativa: serve per importare gli annunci visibili nelle pagine dei marketplace e controllare le ricerche salvate.
+L’estensione è facoltativa per consultare la dashboard, ma è raccomandata per la ricerca automatica: consente al pulsante **Esegui ricerca** di aprire in background le pagine dei marketplace, leggerle con la sessione del browser e richiuderle al termine.
 
 ![Schema di installazione dell’estensione e importazione in LootSniper](docs/images/estensione.svg)
 
@@ -154,9 +154,9 @@ L’estensione è facoltativa: serve per importare gli annunci visibili nelle pa
 3. Attiva **Modalità sviluppatore**.
 4. Premi **Carica estensione non pacchettizzata** o **Carica decompressa**, secondo il browser.
 5. Seleziona la cartella **browser-bridge** del progetto, quella che contiene `manifest.json`.
-6. Apri una ricerca su Vinted.it, eBay.it o Subito.it e attendi che gli annunci siano caricati.
-7. Dal menu delle estensioni del browser apri **LootSniper Bridge**.
-8. Verifica **Server connesso**, poi premi **Importa questa pagina**.
+6. Dopo un aggiornamento di LootSniper premi **Ricarica** nella scheda di LootSniper Bridge e ricarica anche la dashboard.
+7. Torna alla dashboard e premi **Esegui ricerca**: la ricerca corrente parte automaticamente nel browser.
+8. Per una singola pagina già aperta puoi comunque usare **LootSniper Bridge → Importa questa pagina**.
 9. Torna alla dashboard: gli annunci importati vengono controllati periodicamente e le opportunità aggiornate compaiono nell’archivio.
 
 Non devi esportare un file dalla pagina del marketplace: questa estensione invia gli annunci direttamente al server locale. Se un sito chiede login o verifiche, completali personalmente prima di riprovare.
