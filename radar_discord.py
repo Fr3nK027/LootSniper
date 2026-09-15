@@ -108,8 +108,14 @@ class DiscordService:
                 price, estimate = item.get('price'), item.get('estimate')
                 if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or not 0 < v <= 100000 for v in (price, estimate)):
                     raise ValueError('Prezzi annuncio non validi')
-                if price > estimate * .95 or estimate - price < self.state['minMargin']:
+                if item.get('isDeal') is not True or price > estimate * .92 or estimate - price < self.state['minMargin']:
                     return {'queued': False}
+                score, confidence = item.get('score', 0), item.get('confidence', 0)
+                if any(isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 100 for value in (score, confidence)):
+                    raise ValueError('Classificazione annuncio non valida')
+                condition = item.get('condition', 'Da verificare')
+                if not isinstance(condition, str):
+                    raise ValueError('Condizioni annuncio non valide')
                 if key in self.state['sent'] or any(row['key'] == key for row in self.state['pending']):
                     return {'queued': False, 'duplicate': True}
                 euro = lambda value: f'{value:.2f} €'
@@ -118,8 +124,11 @@ class DiscordService:
                     'fields': [{'name': 'Prezzo', 'value': euro(price), 'inline': True},
                                {'name': 'Stima indicativa', 'value': euro(estimate), 'inline': True},
                                {'name': 'Differenza stimata', 'value': euro(estimate-price), 'inline': True},
+                               {'name': 'Punteggio bomba', 'value': f'{score:.0f}/100', 'inline': True},
+                               {'name': 'Affidabilità dati', 'value': f'{confidence:.0f}/100', 'inline': True},
+                               {'name': 'Condizioni dichiarate', 'value': condition[:120], 'inline': True},
                                {'name': 'Marketplace', 'value': item['platform']}],
-                    'footer': {'text': 'Verifica condizioni, spedizione e commissioni. La stima non è una quotazione aggiornata.'}}]}
+                    'footer': {'text': 'Verifica venditore, condizioni, spedizione e commissioni. La stima non è una quotazione aggiornata.'}}]}
             self.state['pending'].append({'key': key, 'body': body, 'attempts': 0, 'after': 0})
             self.state['message'] = 'Notifica in coda'
             self.save()

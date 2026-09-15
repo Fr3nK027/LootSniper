@@ -17,6 +17,50 @@ function normalizeListingText(text) {
     .replace(/\s+/g, ' ')
     .trim();
 }
+function listingSignals(value) {
+  const text = normalizeListingText(value);
+  const ramMatch = text.match(/\b(4|8|16|24|32|48|64|96|128|256)\s*(?:gb|g)\s*(?:di\s+)?ram\b|\bram\s*(?:da\s*)?(4|8|16|24|32|48|64|96|128|256)\s*(?:gb|g)\b/);
+  const storageMatches = [...text.matchAll(/\b(\d+(?:[.,]\d+)?)\s*(tb|gb)\b/g)];
+  const storageTB = storageMatches.reduce((largest, match) => {
+    const amount = Number(match[1].replace(',', '.')) * (match[2] === 'gb' ? 1 / 1024 : 1);
+    return Math.max(largest, amount);
+  }, 0);
+  return {
+    text,
+    ramGB: ramMatch ? Number(ramMatch[1] || ramMatch[2]) : 0,
+    storageTB,
+    hasFastStorage: /\b(ssd|nvme)\b/.test(text),
+    rtx40: /\brtx\s*40(?:50|60|70|80|90)(?:\s*ti|\s*super)?\b/.test(text),
+    rtx50: /\brtx\s*50(?:50|60|70|80|90)(?:\s*ti)?\b/.test(text),
+    oled: /\b(oled|mini-led|miniled)\b/.test(text)
+  };
+}
+function listingCondition(value) {
+  const text = normalizeListingText(value);
+  if (/\b(rotto|da riparare|per parti|per ricambi|non funzionante|non si accende|schermo rotto)\b/.test(text)) return { key: 'repair', label: 'Da riparare', adjustment: -30 };
+  if (/(?<!senza )(graffi|ammaccatura|segni evidenti|crepa|rovinato|usurato)\b/.test(text)) return { key: 'worn', label: 'Usato con usura', adjustment: -10 };
+  if (/\b(nuovo|sigillato|imballato|mai acceso|mai aperto)\b/.test(text)) return { key: 'new', label: 'Nuovo / sigillato', adjustment: 8 };
+  if (/\b(ottime condizioni|ottimo stato|come nuovo|perfette condizioni|usato garantito|ricondizionato)\b/.test(text)) return { key: 'good', label: 'Buone condizioni dichiarate', adjustment: 5 };
+  if (/\b(usato|seconda mano)\b/.test(text)) return { key: 'used', label: 'Usato', adjustment: 0 };
+  return { key: 'unknown', label: 'Condizioni non indicate', adjustment: 0 };
+}
+function classifyOpportunity(evaluation, price, value) {
+  const condition = listingCondition(value);
+  const estimate = Number(evaluation?.stima) || 0;
+  const confidence = Math.max(0, Math.min(100, Number(evaluation?.confidence) || 0));
+  const specScore = Math.max(0, Math.min(100, Number(evaluation?.vsScore) || 0));
+  const margin = estimate - price;
+  const discountPercent = estimate > 0 ? Math.round((margin / estimate) * 1000) / 10 : 0;
+  if (evaluation?.kind === 'generic' || !Number.isFinite(price) || price <= 0 || estimate <= 0) {
+    return { isDeal: false, dealScore: 0, discountPercent: 0, condition: condition.key, conditionLabel: condition.label, tier: 'catalog' };
+  }
+  const valuePoints = Math.max(0, Math.min(55, discountPercent * 1.55));
+  const dealScore = Math.round(Math.max(0, Math.min(100, valuePoints + confidence * .25 + specScore * .12 + condition.adjustment)));
+  const minimumMargin = Math.max(75, estimate * .08);
+  const isDeal = margin >= minimumMargin && discountPercent >= 8 && confidence >= 70 && condition.key !== 'repair' && dealScore >= 48;
+  const tier = isDeal && dealScore >= 75 ? 'bomb' : isDeal ? 'interesting' : 'catalog';
+  return { isDeal, dealScore, discountPercent, condition: condition.key, conditionLabel: condition.label, tier };
+}
 function analyzeHardware(text, price) {
   text = normalizeListingText(text);
   if (!Number.isFinite(price) || price <= 0) return null;
@@ -42,7 +86,8 @@ function analyzeHardware(text, price) {
   if (!/(\b(1|2|4)\s*(tb|t)\b|ssd|nvme)/i.test(text)) tags.push({ text: 'Storage non indicato', cls: 't-neutral' });
   const confidence = Math.min(100, 45 + (gpuMatch ? 35 : 0) + (/(ram|gb)/i.test(text) ? 10 : 0) + (/(ssd|nvme|tb)/i.test(text) ? 10 : 0));
   const estimated = Math.round(baseValue * damageMultiplier);
-  return { stima: estimated, stimaNuovo: Math.round(estimated * (estimated > 3000 ? 1.55 : 1.4)), reference: null, tags, margine: estimated - price, gpuName: detectedGpu || 'Gaming Laptop', vsScore, confidence };
+  const evaluation = { stima: estimated, stimaNuovo: Math.round(estimated * (estimated > 3000 ? 1.55 : 1.4)), reference: null, tags, margine: estimated - price, gpuName: detectedGpu || 'Gaming Laptop', vsScore, confidence, kind: 'hardware' };
+  return { ...evaluation, ...classifyOpportunity(evaluation, price, text) };
 }
 
 function analyzeGenericFeatures(value) {
@@ -177,20 +222,21 @@ function cleanResult(item) {
   const generic = kind === 'generic' ? analyzeGenericFeatures(title + ' ' + details) : null;
   const tags = generic ? [...mappedTags, ...generic.tags].filter((tag, index, array) =>
     array.findIndex(candidate => candidate.text.toLowerCase() === tag.text.toLowerCase()) === index).slice(0, 10) : mappedTags;
+  const baseEvaluation = { stima: data.stima, stimaNuovo: Number(data.stimaNuovo) > 0 ? Number(data.stimaNuovo) : Math.round(data.stima * 1.4),
+    margine: data.stima - price, gpuName: generic ? generic.category : String(data.gpuName || 'Da verificare'), kind,
+    vsScore: Math.max(0, Math.min(100, Number(data.vsScore) || 0)),
+    confidence: Math.max(0, Math.min(100, Number(data.confidence) || (kind === 'generic' ? 0 : 45))), tags };
+  const opportunity = classifyOpportunity(baseEvaluation, price, title + ' ' + details);
   return { titolo: title, prezzo: price, url, platform: item.platform,
     image: safeUrl(item.image), details,
     firstSeen: validTimestamp(item.firstSeen), updatedAt: validTimestamp(item.updatedAt),
     priceHistory: (Array.isArray(item.priceHistory) ? item.priceHistory : []).filter(point => point && Number.isFinite(point.price) && point.price > 0)
       .slice(-20).map(point => ({ price: point.price, at: validTimestamp(point.at) })),
-    evalData: { stima: data.stima, margine: data.stima - price, gpuName: generic ? generic.category : String(data.gpuName || 'Da verificare'),
-      kind,
-      vsScore: Math.max(0, Math.min(100, Number(data.vsScore) || 0)),
-      confidence: Math.max(0, Math.min(100, Number(data.confidence) || 45)),
-      tags }
+    evalData: { ...baseEvaluation, ...opportunity }
   };
 }
 function validTimestamp(value) {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 && number <= Date.now() + 86400000 ? number : Date.now();
 }
-if (typeof module !== 'undefined') module.exports = { explainListing, analyzeGenericFeatures, parseMoney, extractPrices, analyzeHardware, normalizeListingText, safeUrl, canonicalUrl, pageUrl, escapeHtml, cleanResult };
+if (typeof module !== 'undefined') module.exports = { explainListing, analyzeGenericFeatures, listingSignals, listingCondition, classifyOpportunity, parseMoney, extractPrices, analyzeHardware, normalizeListingText, safeUrl, canonicalUrl, pageUrl, escapeHtml, cleanResult };

@@ -73,7 +73,7 @@ Per la diagnostica con terminale visibile usa `python launcher.py` e chiudi con 
 
 Ogni volta che premi **Esegui ricerca**, LootSniper svuota il radar precedente e riparte da zero. Anche un nuovo avvio azzera annunci, preferiti, filtri, importazioni e l’elenco temporaneo delle ricerche. Tema, configurazione Discord e file ricerca già scaricati rimangono disponibili.
 
-Per i portatili gaming riconosciuti, LootSniper evidenzia quelli con prezzo inizialmente entro il 95% della stima indicativa. NAS, router e altri prodotti vengono comunque mostrati e ordinati per prezzo: in questi casi la valutazione è manuale perché non viene inventata una quotazione senza dati affidabili.
+La vista iniziale **Bombe** mostra soltanto gli annunci che superano insieme le soglie di margine, completezza dei dati e condizioni. Premi **Tutti gli annunci** per vedere anche NAS, router, componenti e prodotti che richiedono un confronto manuale: restano disponibili, ma non vengono più confusi con le occasioni classificate.
 
 Per l’elettronica generica, LootSniper evidenzia soltanto caratteristiche scritte nell’annuncio: memoria, archiviazione, numero di bay, standard Wi-Fi, velocità di rete, 5G e Dual SIM. Nella tabella di confronto le stime non disponibili restano esplicitamente indicate come **confronto manuale**.
 
@@ -105,6 +105,7 @@ L’elenco interno è condiviso con l’estensione soltanto durante la sessione 
 - Il catalogo parte in modalità **Lista**: immagine a sinistra, caratteristiche e controlli al centro, prezzo e azioni a destra. È pensato per confrontare rapidamente componenti ed elettronica con una struttura familiare.
 - Premi **Griglia** per una vista più compatta; LootSniper ricorda la vista scelta sul PC.
 - Cerca un modello o una caratteristica nei risultati.
+- Passa da **Bombe** a **Tutti gli annunci** per separare le opportunità classificate dal catalogo raccolto.
 - Filtra per marketplace, budget massimo e differenza minima.
 - Filtra per categoria: portatili gaming, componenti PC, NAS, router e rete, server, smartphone o altra elettronica. Il menu mostra quanti annunci sono presenti in ogni categoria.
 - Il menu Marketplace mostra quanti annunci arrivano da Vinted, eBay e Subito, così sai subito dove si concentra il catalogo.
@@ -112,11 +113,12 @@ L’elenco interno è condiviso con l’estensione soltanto durante la sessione 
 - Se il prezzo minimo supera il massimo, il catalogo indica subito come correggere la fascia invece di confonderla con una ricerca senza risultati.
 - Attiva **Solo con foto** quando vuoi escludere gli annunci senza immagine; anche questa scelta viene conservata nel file ricerca.
 - I filtri applicati compaiono sopra gli annunci: premi **×** su un singolo filtro per rimuoverlo senza perdere gli altri.
+- I filtri caratteristiche hanno tre stati: il primo clic include (`+ RAM`), il secondo esclude (`− RAM`), il terzo torna neutro. Sono disponibili RAM, RAM 32 GB+, SSD/NVMe, storage 1 TB+, RTX serie 40 e 50, OLED/Mini LED, affidabilità dei dati e condizioni.
 - Premi la **stella** sulla scheda per salvarla nei preferiti.
 - Usa **Solo preferiti** per restringere l’archivio.
 - Scegli l’ordinamento; **Mostra altri 60 annunci** carica le schede successive.
 - Apri rapidamente un’offerta sul marketplace premendo la sua immagine, il titolo oppure **Vedi l’annuncio**.
-- Leggi **Perché è nel radar** e apri **Cosa verificare prima di comprare**: LootSniper distingue i dati riconosciuti nel testo da quelli ancora mancanti.
+- Leggi il **Punteggio bomba**, il valore usato stimato, il prezzo nuovo indicativo, il margine percentuale, l’affidabilità dei dati e le condizioni dichiarate. Apri poi **Cosa verificare prima di comprare** per vedere quali informazioni mancano.
 
 Le scorciatoie **Componenti PC**, **NAS**, **Server**, **Smartphone** e **Router** preparano subito i tre marketplace. La parola chiave resta modificabile prima dell’avvio, quindi puoi precisare marca, modello, capacità o qualsiasi altra caratteristica.
 
@@ -128,7 +130,9 @@ Per confrontare due o tre annunci:
 
 ![Confronto tra un portatile gaming e un NAS dimostrativi](docs/images/confronto.png)
 
-**Stime e indice hardware sono indicativi:** non sono quotazioni aggiornate, benchmark o una garanzia di rivendita. Controlla prezzo, configurazione, condizioni, spedizione e commissioni nell’annuncio originale. I rialzi e ribassi mostrati si basano sui prezzi osservati da LootSniper, non su uno storico completo del marketplace.
+Il **Punteggio bomba** combina lo sconto rispetto al valore usato stimato, la completezza delle specifiche, l’indice specifiche locale e le condizioni dichiarate. Per essere mostrato come occasione servono almeno l’8% di differenza, un margine minimo proporzionato al valore, affidabilità dati di almeno 70/100 e nessuna indicazione “da riparare”. L’affidabilità del venditore non viene inventata: la scheda ricorda di verificare feedback, anzianità dell’account e protezione acquisti sul marketplace. È un filtro prudente, non una garanzia di guadagno.
+
+**Stime, prezzo nuovo indicativo e indice specifiche sono calcoli locali:** non sono quotazioni aggiornate, benchmark Versus o una garanzia di rivendita. La scheda offre **Verifica su Versus** per aprire una ricerca esterna senza attribuire a Versus dati che il sito non ha fornito all’app. Controlla sempre configurazione, condizioni, venditore, spedizione e commissioni nell’annuncio originale. I rialzi e ribassi si basano sui prezzi osservati da LootSniper, non su uno storico completo del marketplace.
 
 ## Installa l’estensione locale
 
@@ -176,7 +180,7 @@ Questa funzione è facoltativa e inizialmente disattivata. Non serve creare un b
 5. Imposta la **Differenza stimata minima (€)**: per esempio 200 invia soltanto nuove opportunità con almeno 200 € di differenza tra stima e prezzo.
 6. Attiva **Pubblica le nuove bombe** e premi **Salva Discord**.
 7. Premi **Invia messaggio di prova** e verifica il messaggio nel canale. Il pulsante usa il webhook già salvato.
-8. Avvia una ricerca oppure importa nuovi annunci con l’estensione. Le nuove opportunità che rispettano la soglia vengono pubblicate automaticamente con titolo, link, prezzo e stima indicativa.
+8. Avvia una ricerca oppure importa nuovi annunci con l’estensione. Solo le nuove opportunità classificate come bombe vengono pubblicate con titolo, link, prezzo, valore stimato, margine, punteggio, affidabilità dei dati e condizioni dichiarate.
 
 Gli annunci già presenti nell’archivio prima dell’attivazione non vengono pubblicati in blocco. Gli invii confermati vengono ricordati per gli ultimi 10.000 identificativi, anche dopo un riavvio; le normali variazioni di prezzo non producono nuovi messaggi. La coda conserva fino a 200 invii, rispetta le attese richieste da Discord e riprova gli errori di rete temporanei fino a tre tentativi. Lo stato degli invii compare sotto i pulsanti. Le menzioni automatiche come @everyone sono disabilitate.
 

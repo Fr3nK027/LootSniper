@@ -44,23 +44,33 @@ let renderedLimit = 60;
 let quickQueryDirty = false;
 let resultView = readStorage('radar-result-view', 'list') === 'grid' ? 'grid' : 'list';
 let linkMode = readStorage('radar-link-mode', 'auto') === 'manual' ? 'manual' : 'auto';
+let resultScope = readStorage('radar-result-scope', 'deals') === 'all' ? 'all' : 'deals';
 const manualPlatforms = new Set();
 const FILTER_IDS = ['search-input', 'platform-filter', 'category-filter', 'sort-order', 'min-price', 'max-price', 'min-margin', 'with-photo-only', 'favorites-only'];
 const CHECKBOX_FILTERS = new Set(['with-photo-only', 'favorites-only']);
 const SESSION_KEY = 'radar-session';
 const SEARCH_PROFILE_FORMAT = 'lootsniper-search';
 const SEARCH_PROFILE_VERSION = 1;
-const SORT_ORDERS = ['margin-desc', 'price-asc', 'price-desc', 'vs-desc', 'newest'];
+const SORT_ORDERS = ['deal-desc', 'margin-desc', 'price-asc', 'price-desc', 'vs-desc', 'newest'];
 const PLATFORM_LABELS = { VINTED: 'Vinted', EBAY: 'eBay', SUBITO: 'Subito' };
 const CATEGORY_LABELS = { gaming: 'Portatili gaming', component: 'Componenti PC', nas: 'NAS', network: 'Router e rete', server: 'Server', smartphone: 'Smartphone', other: 'Altra elettronica' };
+const FEATURE_FILTERS = {
+  ram: 'RAM rilevata', ram32: 'RAM 32GB+', fastStorage: 'SSD / NVMe', storage1tb: 'Storage 1TB+',
+  rtx40: 'RTX serie 40', rtx50: 'RTX serie 50', oled: 'OLED / Mini LED', reliable: 'Dati affidabili',
+  goodCondition: 'Buone condizioni', repair: 'Da riparare'
+};
+let featureFilters = readStorage('radar-feature-filters', {});
+if (!featureFilters || typeof featureFilters !== 'object' || Array.isArray(featureFilters)) featureFilters = {};
+featureFilters = Object.fromEntries(Object.entries(featureFilters).filter(([key, value]) => Object.hasOwn(FEATURE_FILTERS, key) && ['include', 'exclude'].includes(value)));
 
 function resetBrowserSession(session) {
   bombsArray = []; favorites = new Set(); savedSearches = []; selectedForVersus = [];
   totalAnalyzed = 0; ignoredImports = {}; importVersions = new Map(); importCursor = 0;
-  undoArchive = null; renderedLimit = 60; quickQueryDirty = false; manualPlatforms.clear();
+  undoArchive = null; renderedLimit = 60; quickQueryDirty = false; manualPlatforms.clear(); resultScope = 'deals'; featureFilters = {};
   persist('radar-results', []); persist('radar-favorites', []); persist('radar-searches', []);
   persist('radar-searches-local-backup', []); persist('radar-ignored-imports', {});
-  persist('radar-undo', null); persist('radar-filters', {}); persist(SESSION_KEY, session);
+  persist('radar-undo', null); persist('radar-filters', {}); persist('radar-result-scope', resultScope);
+  persist('radar-feature-filters', featureFilters); persist(SESSION_KEY, session);
 }
 
 function resetRadarResults() {
@@ -78,6 +88,8 @@ async function initializeSession() {
 function persistFilters() {
   const values = Object.fromEntries(FILTER_IDS.map(id => [id, CHECKBOX_FILTERS.has(id) ? $(id).checked : $(id).value]));
   persist('radar-filters', values);
+  persist('radar-result-scope', resultScope);
+  persist('radar-feature-filters', featureFilters);
 }
 function restoreFilters() {
   const values = readStorage('radar-filters', {});
@@ -85,7 +97,7 @@ function restoreFilters() {
   $('search-input').value = typeof values['search-input'] === 'string' ? values['search-input'].slice(0, 500) : '';
   $('platform-filter').value = Object.hasOwn(MARKET_HOSTS, values['platform-filter']) ? values['platform-filter'] : '';
   $('category-filter').value = Object.hasOwn(CATEGORY_LABELS, values['category-filter']) ? values['category-filter'] : '';
-  $('sort-order').value = SORT_ORDERS.includes(values['sort-order']) ? values['sort-order'] : 'margin-desc';
+  $('sort-order').value = SORT_ORDERS.includes(values['sort-order']) ? values['sort-order'] : 'deal-desc';
   ['min-price', 'max-price', 'min-margin'].forEach(id => { $(id).value = values[id] !== '' && Number.isFinite(Number(values[id])) && Number(values[id]) >= 0 ? String(values[id]) : ''; });
   $('with-photo-only').checked = values['with-photo-only'] === true;
   $('favorites-only').checked = values['favorites-only'] === true;
@@ -185,9 +197,15 @@ function loadSavedSearch(search) {
   $('min-margin').value = search.minMargin === null || search.minMargin === undefined ? '' : String(search.minMargin);
   $('platform-filter').value = Object.hasOwn(MARKET_HOSTS, search.platformFilter) ? search.platformFilter : '';
   $('category-filter').value = Object.hasOwn(CATEGORY_LABELS, search.categoryFilter) ? search.categoryFilter : '';
-  $('sort-order').value = SORT_ORDERS.includes(search.sortOrder) ? search.sortOrder : 'margin-desc';
+  $('sort-order').value = SORT_ORDERS.includes(search.sortOrder) ? search.sortOrder : 'deal-desc';
   $('with-photo-only').checked = search.withPhotoOnly === true;
   $('favorites-only').checked = false;
+  resultScope = search.resultScope === 'all' ? 'all' : 'deals';
+  featureFilters = search.featureFilters && typeof search.featureFilters === 'object' && !Array.isArray(search.featureFilters)
+    ? Object.fromEntries(Object.entries(search.featureFilters).filter(([key, value]) => Object.hasOwn(FEATURE_FILTERS, key) && ['include', 'exclude'].includes(value))) : {};
+  $('scope-deals').setAttribute('aria-pressed', String(resultScope === 'deals'));
+  $('scope-all').setAttribute('aria-pressed', String(resultScope === 'all'));
+  renderFeatureFilters();
   $('deep-scan').checked = search.deepScan !== false;
   quickQueryDirty = false; manualPlatforms.clear();
   const customPlatforms = Array.isArray(search.customPlatforms) ? search.customPlatforms : [];
@@ -272,8 +290,10 @@ function searchProfile(entry) {
       platform: entry.platformFilter || '',
       category: entry.categoryFilter || '',
       withPhoto: entry.withPhotoOnly === true,
-      order: entry.sortOrder || 'margin-desc',
-      text: entry.resultQuery || ''
+      order: entry.sortOrder || 'deal-desc',
+      text: entry.resultQuery || '',
+      scope: entry.resultScope === 'all' ? 'all' : 'deals',
+      features: entry.featureFilters || {}
     },
     deepScan: entry.deepScan !== false,
     updatedAt: entry.updatedAt
@@ -319,10 +339,15 @@ function parseSearchProfile(data) {
   if (entry.categoryFilter !== '' && !Object.hasOwn(CATEGORY_LABELS, entry.categoryFilter)) throw new Error('Filtro categoria non valido.');
   if (filters.withPhoto !== undefined && typeof filters.withPhoto !== 'boolean') throw new Error('Filtro foto non valido.');
   entry.withPhotoOnly = filters.withPhoto === true;
-  entry.sortOrder = filters.order ?? 'margin-desc';
+  entry.sortOrder = filters.order ?? 'deal-desc';
   if (!SORT_ORDERS.includes(entry.sortOrder)) throw new Error('Ordinamento non valido.');
   entry.resultQuery = filters.text ?? '';
   if (typeof entry.resultQuery !== 'string' || entry.resultQuery.length > 500) throw new Error('Filtro testo non valido.');
+  entry.resultScope = filters.scope ?? 'deals';
+  if (!['deals', 'all'].includes(entry.resultScope)) throw new Error('Vista risultati non valida.');
+  const features = filters.features ?? {};
+  if (!features || typeof features !== 'object' || Array.isArray(features) || Object.entries(features).some(([key, value]) => !Object.hasOwn(FEATURE_FILTERS, key) || !['include', 'exclude'].includes(value))) throw new Error('Filtri caratteristiche non validi.');
+  entry.featureFilters = { ...features };
   if (data.deepScan !== undefined && typeof data.deepScan !== 'boolean') throw new Error('deepScan deve essere true oppure false.');
   entry.deepScan = data.deepScan !== false;
   entry.updatedAt = new Date().toISOString();
@@ -362,8 +387,9 @@ async function saveSearch() {
       minMargin: optionalProfileNumber($('min-margin').value, 'La differenza minima'), platformFilter: $('platform-filter').value,
       categoryFilter: $('category-filter').value,
       withPhotoOnly: $('with-photo-only').checked,
-      sortOrder: SORT_ORDERS.includes($('sort-order').value) ? $('sort-order').value : 'margin-desc',
-      resultQuery: $('search-input').value.slice(0, 500), deepScan: $('deep-scan').checked, updatedAt: new Date().toISOString() };
+      sortOrder: SORT_ORDERS.includes($('sort-order').value) ? $('sort-order').value : 'deal-desc',
+      resultQuery: $('search-input').value.slice(0, 500), resultScope, featureFilters: { ...featureFilters },
+      deepScan: $('deep-scan').checked, updatedAt: new Date().toISOString() };
   } catch (error) { logMsg(error.message, 'log-warn'); return; }
   sources.forEach(source => { entry[source.platform.toLowerCase()] = source.url; });
   const index = savedSearches.findIndex(search => search.name.toLowerCase() === name.toLowerCase());
@@ -405,22 +431,65 @@ function priceRangeError() {
   minimum.setAttribute('aria-invalid', String(invalid)); maximum.setAttribute('aria-invalid', String(invalid));
   return message;
 }
+function featureMatches(item, key) {
+  const signals = listingSignals(item.titolo + ' ' + item.details);
+  if (key === 'ram') return signals.ramGB > 0;
+  if (key === 'ram32') return signals.ramGB >= 32;
+  if (key === 'fastStorage') return signals.hasFastStorage;
+  if (key === 'storage1tb') return signals.storageTB >= 1;
+  if (key === 'rtx40') return signals.rtx40;
+  if (key === 'rtx50') return signals.rtx50;
+  if (key === 'oled') return signals.oled;
+  if (key === 'reliable') return item.evalData.confidence >= 80;
+  if (key === 'goodCondition') return ['new', 'good'].includes(item.evalData.condition);
+  if (key === 'repair') return item.evalData.condition === 'repair';
+  return false;
+}
+function matchesFeatureFilters(item) {
+  return Object.entries(featureFilters).every(([key, state]) => state === 'include' ? featureMatches(item, key) : !featureMatches(item, key));
+}
+function renderFeatureFilters() {
+  const container = $('feature-filters');
+  container.innerHTML = Object.entries(FEATURE_FILTERS).map(([key, label]) => {
+    const state = featureFilters[key] || 'neutral';
+    const prefix = state === 'include' ? '+ ' : state === 'exclude' ? '− ' : '';
+    const action = state === 'include' ? 'incluso; clicca per escludere' : state === 'exclude' ? 'escluso; clicca per azzerare' : 'neutro; clicca per includere';
+    return '<button type="button" class="tri-filter ' + state + '" data-feature="' + key + '" data-state="' + state +
+      '" aria-label="' + escapeHtml(label + ': ' + action) + '">' + prefix + escapeHtml(label) + '</button>';
+  }).join('');
+}
+function cycleFeatureFilter(key) {
+  if (!Object.hasOwn(FEATURE_FILTERS, key)) return false;
+  const current = featureFilters[key] || 'neutral';
+  if (current === 'neutral') featureFilters[key] = 'include';
+  else if (current === 'include') featureFilters[key] = 'exclude';
+  else delete featureFilters[key];
+  renderedLimit = 60; persistFilters(); renderFeatureFilters(); renderAllCards();
+  return true;
+}
+function applyResultScope(scope) {
+  resultScope = scope === 'all' ? 'all' : 'deals';
+  $('scope-deals').setAttribute('aria-pressed', String(resultScope === 'deals'));
+  $('scope-all').setAttribute('aria-pressed', String(resultScope === 'all'));
+  renderedLimit = 60; persistFilters(); renderAllCards();
+}
 function filteredItems() {
   if (priceRangeError()) return [];
   const query = normalizeListingText($('search-input').value);
   const minPrice = Number($('min-price').value) || 0;
   const maxPrice = Number($('max-price').value) || Infinity;
   const minMargin = $('min-margin').value === '' ? -Infinity : Number($('min-margin').value);
-  const items = bombsArray.filter(item => (!$('platform-filter').value || item.platform === $('platform-filter').value)
+  const items = bombsArray.filter(item => (resultScope === 'all' || item.evalData.isDeal)
+    && (!$('platform-filter').value || item.platform === $('platform-filter').value)
     && (!$('category-filter').value || resultCategory(item) === $('category-filter').value)
     && (!$('with-photo-only').checked || Boolean(item.image))
     && (!$('favorites-only').checked || favorites.has(item.url))
-    && item.prezzo >= minPrice && item.prezzo <= maxPrice && item.evalData.margine >= minMargin
+    && item.prezzo >= minPrice && item.prezzo <= maxPrice && item.evalData.margine >= minMargin && matchesFeatureFilters(item)
     && normalizeListingText(item.titolo + ' ' + item.evalData.gpuName + ' ' + item.details).includes(query));
   const sort = $('sort-order').value;
   items.sort((a, b) => sort === 'price-asc' ? a.prezzo - b.prezzo : sort === 'price-desc' ? b.prezzo - a.prezzo
     : sort === 'vs-desc' ? b.evalData.vsScore - a.evalData.vsScore : sort === 'newest' ? b.updatedAt - a.updatedAt
-    : b.evalData.margine - a.evalData.margine);
+    : sort === 'deal-desc' ? b.evalData.dealScore - a.evalData.dealScore : b.evalData.margine - a.evalData.margine);
   return items;
 }
 function applyResultView(view = resultView) {
@@ -443,13 +512,18 @@ function renderActiveFilters() {
   if ($('min-margin').value !== '') entries.push(['min-margin', 'Risparmio da ' + $('min-margin').value + ' €']);
   if ($('with-photo-only').checked) entries.push(['with-photo-only', 'Solo con foto']);
   if ($('favorites-only').checked) entries.push(['favorites-only', 'Solo preferiti']);
+  Object.entries(featureFilters).forEach(([key, state]) => entries.push(['feature:' + key,
+    (state === 'include' ? '+ ' : '− ') + FEATURE_FILTERS[key]]));
   $('active-filters').hidden = !entries.length;
   $('active-filters').innerHTML = entries.length ? '<span>Filtri attivi</span>' + entries.map(([id, label]) =>
     '<button type="button" data-clear-filter="' + id + '" aria-label="Rimuovi filtro ' + escapeHtml(label) + '">' + escapeHtml(label) + ' <b aria-hidden="true">×</b></button>').join('') : '';
 }
 function clearActiveFilter(id) {
-  if (!['search-input', 'platform-filter', 'category-filter', 'min-price', 'max-price', 'min-margin', 'with-photo-only', 'favorites-only'].includes(id)) return false;
-  if (CHECKBOX_FILTERS.has(id)) $(id).checked = false; else $(id).value = '';
+  if (id.startsWith('feature:')) {
+    const key = id.slice(8); if (!Object.hasOwn(FEATURE_FILTERS, key)) return false;
+    delete featureFilters[key]; renderFeatureFilters();
+  } else if (!['search-input', 'platform-filter', 'category-filter', 'min-price', 'max-price', 'min-margin', 'with-photo-only', 'favorites-only'].includes(id)) return false;
+  else if (CHECKBOX_FILTERS.has(id)) $(id).checked = false; else $(id).value = '';
   renderedLimit = 60; persistFilters(); renderAllCards();
   const nextFilter = $('active-filters').querySelector?.('button');
   (nextFilter || $('results-count')).focus({ preventScroll: true });
@@ -462,23 +536,29 @@ function renderAllCards() {
   const rangeError = priceRangeError();
   const items = filteredItems();
   selectedForVersus = selectedForVersus.filter(url => bombsArray.some(item => item.url === url));
+  const dealCount = bombsArray.filter(item => item.evalData.isDeal).length;
   const emptyTitle = rangeError
     ? 'Controlla la fascia di prezzo'
+    : resultScope === 'deals' && bombsArray.length && !dealCount
+      ? 'Nessuna bomba verificabile per ora'
     : bombsArray.length
       ? 'Nessun risultato con questi filtri'
       : 'La tua prossima scoperta parte da qui';
   const emptyText = rangeError || (bombsArray.length
-    ? 'Prova a cambiare il budget o a rimuovere un filtro.'
+    ? resultScope === 'deals' && !dealCount
+      ? 'Gli annunci raccolti non superano ancora le soglie di prezzo, dati e condizioni. Apri “Tutti gli annunci” per confrontarli.'
+      : 'Prova a cambiare il budget o a rimuovere un filtro.'
     : 'Cerca un NAS, un router, un portatile o un altro prodotto tecnologico; puoi anche importare gli annunci con l’estensione.');
   const emptyAction = bombsArray.length ? 'reset' : 'guide';
   const emptyLabel = bombsArray.length ? 'Azzera i filtri' : 'Prepara la prima ricerca';
   $('results-grid').innerHTML = items.length ? items.slice(0, renderedLimit).map(cardTemplate).join('') :
     '<div class="empty" role="status"><span class="empty-icon" aria-hidden="true">◎</span><h2>' + emptyTitle +
     '</h2><p>' + emptyText + '</p><button class="primary" data-empty-action="' + emptyAction + '">' + emptyLabel + '</button></div>';
-  $('count-bombs').textContent = bombsArray.length;
+  $('count-bombs').textContent = dealCount;
   $('count-scanned').textContent = totalAnalyzed;
   $('count-favorites').textContent = bombsArray.filter(item => favorites.has(item.url)).length;
-  $('results-count').textContent = items.length + ' risultati' + (items.length > renderedLimit ? ' · primi ' + renderedLimit + ' mostrati' : '');
+  $('results-count').textContent = items.length + (resultScope === 'deals' ? ' occasioni classificate' : ' annunci') +
+    (items.length > renderedLimit ? ' · primi ' + renderedLimit + ' mostrati' : '');
   renderActiveFilters();
   const marketQuery = $('market-query').value.trim();
   $('results-title').textContent = marketQuery ? 'Risultati per “' + marketQuery.slice(0, 80) + '”' : bombsArray.length ? 'Annunci nel radar' : 'Trova il tuo prossimo acquisto';
@@ -494,6 +574,8 @@ function renderAllCards() {
 function cardTemplate(item) {
   const data = item.evalData, saved = favorites.has(item.url);
   const generic = data.kind === 'generic';
+  const statusLabel = data.tier === 'bomb' ? 'Bomba' : data.tier === 'interesting' ? 'Occasione' : 'Da confrontare';
+  const versusUrl = 'https://versus.com/en/search?q=' + encodeURIComponent(data.gpuName || item.titolo.slice(0, 80));
   const history = item.priceHistory || [];
   const previousPrice = history.length > 1 ? history[history.length - 2].price : null;
   const change = previousPrice === null ? 0 : item.prezzo - previousPrice;
@@ -503,8 +585,8 @@ function cardTemplate(item) {
     ' rilevazioni</summary><ol>' + [...history].reverse().map(point => '<li><time>' + new Date(point.at).toLocaleDateString('it-IT') +
     '</time><span>' + euros.format(point.price) + '</span></li>').join('') + '</ol></details>' : '';
   const reason = explainListing(item);
-  const reasonMarkup = '<div class="deal-reason"><strong>Perché è nel radar</strong><p>' +
-    (generic ? 'Corrisponde alla ricerca corrente: confronta prezzo, modello e condizioni con gli altri annunci.' :
+  const reasonMarkup = '<div class="deal-reason"><strong>' + (data.isDeal ? 'Perché è una possibile occasione' : 'Perché richiede un confronto') + '</strong><p>' +
+    (generic ? 'Il modello è pertinente alla ricerca, ma non esiste ancora una stima locale abbastanza affidabile.' :
     reason.difference > 0 ? euros.format(reason.difference) + ' sotto la stima indicativa.' : 'Il prezzo attuale non è sotto la stima indicativa.') +
     '</p>' + (reason.facts.length ? '<p>Nel testo: ' + reason.facts.map(escapeHtml).join(' · ') + '.</p>' : '') +
     (reason.warnings.length ? '<p class="deal-warning">Attenzione: ' + reason.warnings.map(escapeHtml).join(', ') + '.</p>' : '') +
@@ -516,21 +598,24 @@ function cardTemplate(item) {
   const openLabel = escapeHtml('Apri annuncio: ' + item.titolo);
   const preview = item.image ? '<img src="' + escapeHtml(item.image) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span class="image-placeholder" aria-hidden="true">▧</span><span>Nessuna immagine</span>';
   const details = item.details ? escapeHtml(item.details.slice(0, 280)) : 'Specifiche non riportate: controlla la descrizione originale.';
-  return '<article class="card" aria-label="' + escapeHtml(item.titolo + ' · ' + item.platform + ' · ' + euros.format(item.prezzo)) + '"><div class="card-image' + (item.image ? '' : ' card-image-empty') + '"><a class="card-image-link" href="' + listingUrl + '" target="_blank" rel="noopener noreferrer" aria-label="' + openLabel + '">' + preview + '</a><button class="favorite" data-action="favorite" data-url="' +
+  return '<article class="card deal-' + data.tier + '" aria-label="' + escapeHtml(item.titolo + ' · ' + item.platform + ' · ' + euros.format(item.prezzo)) + '"><div class="card-image' + (item.image ? '' : ' card-image-empty') + '"><a class="card-image-link" href="' + listingUrl + '" target="_blank" rel="noopener noreferrer" aria-label="' + openLabel + '">' + preview + '</a><span class="deal-score ' + data.tier + '">' + statusLabel + (generic ? '' : ' · ' + data.dealScore + '/100') + '</span><button class="favorite" data-action="favorite" data-url="' +
     listingUrl + '" aria-pressed="' + saved + '" aria-label="' + (saved ? 'Rimuovi dai preferiti' : 'Salva preferito') + '">' +
     (saved ? '★' : '☆') + '</button></div><div class="card-head card-info"><div class="listing-kicker"><span class="platform ' + item.platform.toLowerCase() + '">' + item.platform +
-    '</span><span>' + (generic ? 'Prodotto da confrontare' : 'Occasione rilevata') + '</span></div><h2 class="card-title"><a class="card-title-link" href="' + listingUrl + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(item.titolo) + '</a></h2><p class="listing-details">' + details + '</p><div class="tags">' +
+    '</span><span>' + escapeHtml(data.conditionLabel) + '</span></div><h2 class="card-title"><a class="card-title-link" href="' + listingUrl + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(item.titolo) + '</a></h2><p class="listing-details">' + details + '</p><div class="tags">' +
     data.tags.map(tag => '<span class="tag ' + tag.cls + '">' + escapeHtml(tag.text) + '</span>').join('') + '</div>' +
-    (generic ? '<div class="power"><span>Valutazione manuale</span></div>' : '<div class="power"><span>Indice hardware ' + data.vsScore +
-    '/100</span><span class="power-bar"><i style="width:' + data.vsScore + '%"></i></span></div>') + reasonMarkup +
+    (generic ? '<div class="power"><span>Affidabilità stima 0/100 · confronto manuale</span></div>' : '<div class="metrics"><div class="power"><span>Indice specifiche locale ' + data.vsScore +
+    '/100</span><span class="power-bar"><i style="width:' + data.vsScore + '%"></i></span></div><div class="power confidence"><span>Affidabilità dati ' + data.confidence +
+    '/100</span><span class="power-bar"><i style="width:' + data.confidence + '%"></i></span></div></div>') + reasonMarkup +
     '</div><div class="card-body card-offer"><div class="prices"><div><span class="price-label">Prezzo annuncio</span><strong class="ask-price">' + euros.format(item.prezzo) +
-    '</strong></div><div class="estimate">' + (generic ? '<span>Valutazione</span><strong>Da verificare</strong><span class="saving">Confronta i prezzi</span>' : '<span>Stima indicativa</span><strong>' + euros.format(data.stima) +
-    '</strong><span class="saving">Possibile differenza ' + euros.format(data.margine) + '</span>') +
-    '</div></div>' + trend + historyMarkup + '<div class="card-meta"><p class="card-note">Spedizione e commissioni da verificare.</p><time class="card-note" datetime="' +
+    '</strong></div><div class="estimate">' + (generic ? '<span>Valore usato</span><strong>Da verificare</strong><span class="saving">Nessun margine attribuito</span>' : '<span>Valore usato stimato</span><strong>' + euros.format(data.stima) +
+    '</strong><span class="saving">Margine ' + (data.margine >= 0 ? '+' : '') + euros.format(data.margine) + ' · ' + (data.discountPercent >= 0 ? '+' : '') + data.discountPercent + '%</span>') +
+    '</div>' + (generic ? '' : '<div class="retail-estimate"><span>Prezzo nuovo indicativo</span><strong>' + euros.format(data.stimaNuovo) + '</strong></div>') +
+    '</div>' + trend + historyMarkup + '<div class="card-meta"><p class="card-note">Venditore: verifica feedback, anzianità e protezione acquisti.</p><p class="card-note">Spedizione e commissioni da verificare.</p><time class="card-note" datetime="' +
     new Date(item.updatedAt).toISOString() + '">Aggiornato ' + new Date(item.updatedAt).toLocaleDateString('it-IT') +
     '</time></div><div class="card-foot"><label class="compare-label"><input class="compare-check" type="checkbox" data-url="' +
-    escapeHtml(item.url) + '" ' + (selectedForVersus.includes(item.url) ? 'checked' : '') + '> Confronta</label><a href="' +
-    listingUrl + '" target="_blank" rel="noopener noreferrer">Vedi l’annuncio ↗</a></div></div></article>';
+    escapeHtml(item.url) + '" ' + (selectedForVersus.includes(item.url) ? 'checked' : '') + '> Confronta</label>' +
+    (generic ? '' : '<a class="versus-link" href="' + escapeHtml(versusUrl) + '" target="_blank" rel="noopener noreferrer">Verifica su Versus ↗</a>') +
+    '<a href="' + listingUrl + '" target="_blank" rel="noopener noreferrer">Vedi l’annuncio ↗</a></div></div></article>';
 }
 function updateCompareBar() {
   $('compare-bar').classList.toggle('active', selectedForVersus.length > 0);
@@ -543,9 +628,13 @@ function showComparison() {
   if (items.length < 2) return;
   const rows = [['Prezzo annuncio', item => euros.format(item.prezzo)], ['Tipo / componente', item => item.evalData.gpuName],
     ['Dati rilevati', item => item.evalData.tags.filter(tag => tag.text !== 'Prezzo da confrontare').map(tag => tag.text).join(' · ') || 'Da verificare'],
-    ['Valutazione', item => item.evalData.kind === 'generic' ? 'Confronto manuale' : item.evalData.vsScore + '/100'],
-    ['Stima indicativa', item => item.evalData.kind === 'generic' ? 'Non disponibile' : euros.format(item.evalData.stima)],
-    ['Possibile differenza', item => item.evalData.kind === 'generic' ? 'Da confrontare' : euros.format(item.evalData.margine)], ['Marketplace', item => item.platform]];
+    ['Punteggio occasione', item => item.evalData.kind === 'generic' ? 'Confronto manuale' : item.evalData.dealScore + '/100'],
+    ['Indice specifiche locale', item => item.evalData.kind === 'generic' ? 'Non disponibile' : item.evalData.vsScore + '/100'],
+    ['Affidabilità dati', item => item.evalData.confidence + '/100'],
+    ['Condizioni dichiarate', item => item.evalData.conditionLabel],
+    ['Valore usato stimato', item => item.evalData.kind === 'generic' ? 'Non disponibile' : euros.format(item.evalData.stima)],
+    ['Prezzo nuovo indicativo', item => item.evalData.kind === 'generic' ? 'Non disponibile' : euros.format(item.evalData.stimaNuovo)],
+    ['Margine potenziale', item => item.evalData.kind === 'generic' ? 'Da confrontare' : euros.format(item.evalData.margine) + ' · ' + item.evalData.discountPercent + '%'], ['Marketplace', item => item.platform]];
   $('comparison-content').innerHTML = '<table><caption>Confronto degli annunci selezionati</caption><thead><tr><th scope="col">Caratteristica</th>' +
     items.map(item => '<th scope="col"><a href="' + escapeHtml(item.url) + '" target="_blank" rel="noopener noreferrer">' +
     escapeHtml(item.titolo) + ' ↗</a></th>').join('') + '</tr></thead><tbody>' + rows.map(([label, value]) =>
@@ -566,7 +655,6 @@ function upsertListing(item) {
   });
   if (!evaluation) return false;
   const previous = bombsArray.find(result => result.url === url);
-  if (!previous && evaluation.kind !== 'generic' && price > evaluation.stima * .95) return false;
   if (previous && item.updatedAt && Number(item.updatedAt) <= previous.updatedAt) return false;
   const updatedAt = Number(item.updatedAt) || Date.now();
   const priceHistory = previous?.priceHistory?.length ? [...previous.priceHistory] :
@@ -576,7 +664,7 @@ function upsertListing(item) {
     image: item.image, details: item.details, firstSeen: previous?.firstSeen || Date.now(), updatedAt, priceHistory });
   if (!result) return false;
   if (previous) Object.assign(previous, result); else bombsArray.push(result);
-  if (!previous && typeof notifyOpportunity === 'function') notifyOpportunity(result);
+  if (!previous && result.evalData.isDeal && typeof notifyOpportunity === 'function') notifyOpportunity(result);
   return true;
 }
 async function importBrowserListings() {
@@ -821,9 +909,18 @@ $('btn-generate-links').addEventListener('click', () => {
 FILTER_IDS.forEach(id => {
   $(id).addEventListener('input', () => { renderedLimit = 60; persistFilters(); renderAllCards(); });
 });
+$('scope-deals').addEventListener('click', () => applyResultScope('deals'));
+$('scope-all').addEventListener('click', () => applyResultScope('all'));
+$('feature-filters').addEventListener('click', event => {
+  const button = event.target?.closest?.('[data-feature]');
+  if (button) cycleFeatureFilter(button.dataset.feature);
+});
 $('btn-reset-filters').addEventListener('click', () => {
   ['search-input', 'platform-filter', 'category-filter', 'min-price', 'max-price', 'min-margin'].forEach(id => { $(id).value = ''; });
-  CHECKBOX_FILTERS.forEach(id => { $(id).checked = false; }); persistFilters(); renderAllCards();
+  CHECKBOX_FILTERS.forEach(id => { $(id).checked = false; });
+  featureFilters = {}; resultScope = 'deals'; renderFeatureFilters();
+  $('scope-deals').setAttribute('aria-pressed', 'true'); $('scope-all').setAttribute('aria-pressed', 'false');
+  persistFilters(); renderAllCards();
 });
 $('active-filters').addEventListener('click', event => {
   const button = event.target?.closest?.('[data-clear-filter]');
@@ -836,7 +933,10 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) impo
 async function initializeApp() {
   try { await initializeSession(); }
   catch (error) { logMsg(error.message, 'log-warn'); }
-  restoreFilters(); setLinkMode(linkMode); applyResultView(); renderAllCards(); renderSavedSearches();
+  restoreFilters(); setLinkMode(linkMode); applyResultView(); renderFeatureFilters();
+  $('scope-deals').setAttribute('aria-pressed', String(resultScope === 'deals'));
+  $('scope-all').setAttribute('aria-pressed', String(resultScope === 'all'));
+  renderAllCards(); renderSavedSearches();
   if (storageWarning) logMsg('Un archivio locale non è leggibile. Il dato originale è stato conservato.', 'log-warn');
   await initializeSearches();
 }

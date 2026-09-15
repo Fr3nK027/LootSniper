@@ -29,7 +29,7 @@ ALLOWED_HOSTS = set().union(*PLATFORM_HOSTS.values())
 STATIC_FILES = {"radar usato 3 market.html", "app.js", "styles.css", "radar-core.js", "radar-runtime.js", "browser-bridge/listings.js", "experience.css", "radar-guide.js", "theme.js", "assets/lootsniper.svg", "assets/lootsniper.ico"}
 WORKSPACE_ID = hashlib.sha256(str(ROOT).casefold().encode()).hexdigest()[:16]
 PORT = 8765
-VERSION = "7.9"
+VERSION = "8.0"
 CATEGORY_FILTERS = {"", "gaming", "component", "nas", "network", "server", "smartphone", "other"}
 MAX_BODY = 2 * 1024 * 1024
 MAX_HTML = 10 * 1024 * 1024
@@ -136,8 +136,8 @@ def clean_searches(searches):
         category_filter = item.get("categoryFilter", "")
         if category_filter not in CATEGORY_FILTERS:
             raise ValueError("Filtro categoria non valido")
-        sort_order = item.get("sortOrder", "margin-desc")
-        if sort_order not in {"margin-desc", "price-asc", "price-desc", "vs-desc", "newest"}:
+        sort_order = item.get("sortOrder", "deal-desc")
+        if sort_order not in {"deal-desc", "margin-desc", "price-asc", "price-desc", "vs-desc", "newest"}:
             raise ValueError("Ordinamento non valido")
         result_query = item.get("resultQuery", "")
         if not isinstance(result_query, str) or len(result_query) > 500:
@@ -148,8 +148,17 @@ def clean_searches(searches):
         with_photo_only = item.get("withPhotoOnly", False)
         if not isinstance(with_photo_only, bool):
             raise ValueError("Filtro foto non valido")
+        result_scope = item.get("resultScope", "deals")
+        if result_scope not in {"deals", "all"}:
+            raise ValueError("Vista risultati non valida")
+        feature_filters = item.get("featureFilters", {})
+        allowed_features = {"ram", "ram32", "fastStorage", "storage1tb", "rtx40", "rtx50", "oled", "reliable", "goodCondition", "repair"}
+        if (not isinstance(feature_filters, dict) or any(key not in allowed_features or value not in {"include", "exclude"}
+                                                       for key, value in feature_filters.items())):
+            raise ValueError("Filtri caratteristiche non validi")
         entry.update({"platformFilter": platform_filter, "categoryFilter": category_filter, "sortOrder": sort_order,
-                      "resultQuery": result_query, "deepScan": deep_scan, "withPhotoOnly": with_photo_only})
+                      "resultQuery": result_query, "deepScan": deep_scan, "withPhotoOnly": with_photo_only,
+                      "resultScope": result_scope, "featureFilters": feature_filters})
         clean.append(entry)
         names.add(name.casefold())
     return clean

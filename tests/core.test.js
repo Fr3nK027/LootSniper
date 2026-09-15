@@ -55,6 +55,22 @@ test('damage wins over new condition language; partial words are not damage', ()
   const clean = core.analyzeHardware('Laptop RTX 4070 senza segni in tutte le sue parti', 300);
   assert.ok(!clean.tags.some(tag => ['Da riparare', 'Usura'].includes(tag.text)));
 });
+test('opportunity classification combines value, data reliability and declared condition', () => {
+  const strong = core.analyzeHardware('Laptop RTX 4070 32 GB RAM 1 TB NVMe ottime condizioni', 800);
+  assert.equal(strong.isDeal, true);
+  assert.ok(strong.dealScore >= 75);
+  assert.equal(strong.condition, 'good');
+  assert.ok(strong.discountPercent > 20);
+  const broken = core.analyzeHardware('Laptop RTX 4070 32 GB RAM 1 TB SSD nuovo ma schermo rotto', 300);
+  assert.equal(broken.isDeal, false);
+  assert.equal(broken.condition, 'repair');
+  const signals = core.listingSignals('RTX 5070 laptop con RAM 64GB, 2TB NVMe e OLED');
+  assert.equal(signals.ramGB, 64);
+  assert.equal(signals.storageTB, 2);
+  assert.equal(signals.hasFastStorage, true);
+  assert.equal(signals.rtx50, true);
+  assert.equal(signals.oled, true);
+});
 test('restored cards reject invalid links and strip untrusted tag classes', () => {
   const entry = { titolo: '<img src=x onerror=alert(1)>', prezzo: 500, url: 'https://ebay.it/itm/123', platform: 'EBAY',
     evalData: { stima: 900, vsScore: 900, tags: [{ text: 'test', cls: '" onclick="evil' }, { text: 'Brand eco -20%', cls: 't-down' }] } };

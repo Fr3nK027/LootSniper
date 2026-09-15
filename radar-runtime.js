@@ -24,7 +24,9 @@ async function notifyOpportunity(item) {
   if (!discordEnabled || radarStopped) return;
   try {
     await api('/api/discord/notify', {method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({item:{title:item.titolo, url:item.url, platform:item.platform, price:item.prezzo, estimate:item.evalData.stima}})});
+      body:JSON.stringify({item:{title:item.titolo, url:item.url, platform:item.platform, price:item.prezzo,
+        estimate:item.evalData.stima, isDeal:item.evalData.isDeal, score:item.evalData.dealScore,
+        confidence:item.evalData.confidence, condition:item.evalData.conditionLabel}})});
   } catch { logMsg('Notifica Discord non accodata. Controlla il server e le impostazioni.', 'log-warn'); }
 }
 async function saveDiscord(clear = false) {

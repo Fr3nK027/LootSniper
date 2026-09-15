@@ -12,7 +12,8 @@ import radar_discord
 from radar_lifecycle import DashboardLifetime
 
 WEBHOOK = 'https://discord.com/api/webhooks/123456789012345678/' + 'a' * 60
-ITEM = {'platform': 'EBAY', 'url': 'https://ebay.it/itm/12345?tracking=x', 'title': 'Laptop RTX 4070 @everyone', 'price': 800, 'estimate': 1250}
+ITEM = {'platform': 'EBAY', 'url': 'https://ebay.it/itm/12345?tracking=x', 'title': 'Laptop RTX 4070 @everyone',
+        'price': 800, 'estimate': 1250, 'isDeal': True, 'score': 82, 'confidence': 90, 'condition': 'Usato'}
 
 class DiscordTests(unittest.TestCase):
     def setUp(self):

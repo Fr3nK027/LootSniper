@@ -79,7 +79,25 @@ test('imports update a saved listing even when its price is no longer a deal', a
   assert.equal(app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/123',title:'Laptop RTX 4070 32 GB RAM',price:2000,updatedAt:Date.now()})"), true);
   assert.equal(app.run('bombsArray[0].prezzo'), 2000);
   assert.equal(app.run('bombsArray.length'), 1);
+  assert.equal(app.run('filteredItems().length'), 0);
+  app.run("resultScope = 'all'");
   assert.equal(app.run('filteredItems().length'), 1);
+});
+test('default radar shows only qualified deals and tri-state feature filters include then exclude', async () => {
+  const app = harness(); await app.run('initialSync');
+  app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/101',title:'Laptop RTX 4070 32 GB RAM 1 TB NVMe ottime condizioni',price:800,updatedAt:Date.now()})");
+  app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/102',title:'Laptop RTX 4070 16 GB RAM 512 GB SSD usato',price:1300,updatedAt:Date.now()})");
+  assert.equal(app.run('bombsArray[0].evalData.isDeal'), true);
+  assert.equal(app.run('bombsArray[1].evalData.isDeal'), false);
+  assert.equal(app.run('filteredItems().length'), 1);
+  assert.equal(app.run("cycleFeatureFilter('ram32')"), true);
+  assert.equal(app.run("featureFilters.ram32"), 'include');
+  assert.equal(app.run('filteredItems().length'), 1);
+  app.run("cycleFeatureFilter('ram32')");
+  assert.equal(app.run("featureFilters.ram32"), 'exclude');
+  assert.equal(app.run('filteredItems().length'), 0);
+  app.run("cycleFeatureFilter('ram32')");
+  assert.equal(app.run("featureFilters.ram32"), undefined);
 });
 test('generic technology such as NAS and routers remains visible for manual comparison', async () => {
   const app = harness(); await app.run('initialSync');
@@ -87,7 +105,7 @@ test('generic technology such as NAS and routers remains visible for manual comp
   assert.equal(app.run('bombsArray[0].evalData.kind'), 'generic');
   assert.equal(app.run('bombsArray[0].evalData.gpuName'), 'NAS');
   assert.match(app.run('cardTemplate(bombsArray[0])'), /2 bay/);
-  assert.match(app.run('cardTemplate(bombsArray[0])'), /Valutazione manuale/);
+  assert.match(app.run('cardTemplate(bombsArray[0])'), /confronto manuale/);
   assert.match(app.run('cardTemplate(bombsArray[0])'), /card-offer/);
   assert.match(app.run('cardTemplate(bombsArray[0])'), /Vedi l’annuncio/);
   assert.equal(app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/789',title:'Alimentatore per NAS Synology',price:30,updatedAt:Date.now()})"), false);
@@ -134,12 +152,13 @@ test('saved filters restore only valid values and do not become arbitrary HTML',
   assert.equal(app.elements.get('category-filter').value, 'nas');
   assert.equal(app.elements.get('with-photo-only').checked, true);
   assert.equal(app.elements.get('favorites-only').checked, true);
-  assert.equal(app.elements.get('sort-order').value, 'margin-desc');
+  assert.equal(app.elements.get('sort-order').value, 'deal-desc');
 });
 test('catalog category filter separates product families', async () => {
   const app = harness(); await app.run('initialSync');
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/1',title:'NAS Synology 4 bay',price:500,updatedAt:Date.now()})");
   app.run("upsertListing({platform:'SUBITO',url:'https://subito.it/informatica/router-1.htm',title:'Router Wi-Fi 7',price:120,updatedAt:Date.now()})");
+  app.run("resultScope = 'all'");
   app.elements.get('category-filter').value = 'nas';
   assert.equal(app.run('filteredItems().length'), 1);
   assert.equal(app.run('filteredItems()[0].evalData.gpuName'), 'NAS');
@@ -151,6 +170,7 @@ test('category menu shows live product counts and preserves the selected categor
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/1',title:'NAS Synology 4 bay',price:500,updatedAt:Date.now()})");
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/2',title:'NAS QNAP 2 bay',price:250,updatedAt:Date.now()})");
   app.run("upsertListing({platform:'SUBITO',url:'https://subito.it/informatica/router-1.htm',title:'Router Wi-Fi 7',price:120,updatedAt:Date.now()})");
+  app.run("resultScope = 'all'");
   app.elements.get('category-filter').value = 'nas';
   app.run('renderAllCards()');
   const options = app.elements.get('category-filter').innerHTML;
@@ -166,6 +186,7 @@ test('marketplace menu shows live counts and preserves the selected marketplace'
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/1',title:'NAS Synology 4 bay',price:500,updatedAt:Date.now()})");
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/2',title:'NAS QNAP 2 bay',price:250,updatedAt:Date.now()})");
   app.run("upsertListing({platform:'SUBITO',url:'https://subito.it/informatica/router-1.htm',title:'Router Wi-Fi 7',price:120,updatedAt:Date.now()})");
+  app.run("resultScope = 'all'");
   app.elements.get('platform-filter').value = 'EBAY';
   app.run('renderAllCards()');
   const options = app.elements.get('platform-filter').innerHTML;
@@ -181,6 +202,7 @@ test('catalog price range applies both minimum and maximum limits', async () => 
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/1',title:'NAS Synology 2 bay',price:150,updatedAt:Date.now()})");
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/2',title:'NAS Synology 4 bay',price:350,updatedAt:Date.now()})");
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/3',title:'NAS Synology 8 bay',price:900,updatedAt:Date.now()})");
+  app.run("resultScope = 'all'");
   app.elements.get('min-price').value = '200';
   app.elements.get('max-price').value = '500';
   assert.equal(app.run('filteredItems().length'), 1);
@@ -192,6 +214,7 @@ test('catalog price range applies both minimum and maximum limits', async () => 
 test('an inverted price range explains the error instead of looking like an empty catalog', async () => {
   const app = harness(); await app.run('initialSync');
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/1',title:'NAS Synology 4 bay',price:350,updatedAt:Date.now()})");
+  app.run("resultScope = 'all'");
   app.elements.get('min-price').value = '700';
   app.elements.get('max-price').value = '500';
   app.run('renderAllCards()');
@@ -209,6 +232,7 @@ test('photo filter keeps only listings with an image and exposes a removable chi
   const app = harness(); await app.run('initialSync');
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/1',title:'NAS Synology 2 bay',price:150,image:'https://images.example/nas.jpg',updatedAt:Date.now()})");
   app.run("upsertListing({platform:'EBAY',url:'https://ebay.it/itm/2',title:'NAS QNAP 4 bay',price:350,updatedAt:Date.now()})");
+  app.run("resultScope = 'all'");
   app.elements.get('with-photo-only').checked = true;
   assert.equal(app.run('filteredItems().length'), 1);
   assert.match(app.run('filteredItems()[0].image'), /^https:/);
@@ -283,6 +307,7 @@ test('saving a generic electronics search downloads a reusable editable profile'
   app.elements.get('category-filter').value = 'nas';
   app.elements.get('with-photo-only').checked = true;
   app.elements.get('sort-order').value = 'price-asc';
+  app.run("resultScope = 'all'; featureFilters = {storage1tb:'include', repair:'exclude'}");
   app.run("$('deep-scan').checked = true; quickQueryDirty = true");
   await app.run('saveSearch()');
   assert.equal(app.downloads.length, 1);
@@ -297,6 +322,8 @@ test('saving a generic electronics search downloads a reusable editable profile'
   assert.equal(profile.filters.category, 'nas');
   assert.equal(profile.filters.withPhoto, true);
   assert.equal(profile.filters.order, 'price-asc');
+  assert.equal(profile.filters.scope, 'all');
+  assert.deepEqual(profile.filters.features, {storage1tb:'include', repair:'exclude'});
 });
 test('a manual search keeps pasted links in its reusable file and restores manual mode', async () => {
   const app = harness(); await app.run('initialSync');
@@ -331,7 +358,7 @@ test('an edited search profile restores query, custom URLs and filters', async (
   const app = harness(); await app.run('initialSync');
   const profile = {format:'lootsniper-search',version:1,name:'Telefono ricondizionato',query:'iPhone 15 256GB',
     marketplaces:{vinted:true,ebay:'https://www.ebay.it/sch/i.html?_nkw=iphone+15&_udhi=700',subito:false},
-    filters:{minPrice:300,maxPrice:700,minMargin:null,platform:'EBAY',category:'smartphone',withPhoto:true,order:'price-asc',text:'256GB'},deepScan:false};
+    filters:{minPrice:300,maxPrice:700,minMargin:null,platform:'EBAY',category:'smartphone',withPhoto:true,order:'price-asc',text:'256GB',scope:'all',features:{fastStorage:'exclude',goodCondition:'include'}},deepScan:false};
   await app.run(`importSearchProfile({target:{files:[{size:1000,text:async()=>${JSON.stringify(JSON.stringify(profile))}}],value:'profile'}})`);
   assert.equal(app.run('savedSearches[0].name'), 'Telefono ricondizionato');
   assert.equal(app.elements.get('market-query').value, 'iPhone 15 256GB');
@@ -343,6 +370,9 @@ test('an edited search profile restores query, custom URLs and filters', async (
   assert.equal(app.elements.get('platform-filter').value, 'EBAY');
   assert.equal(app.elements.get('category-filter').value, 'smartphone');
   assert.equal(app.elements.get('with-photo-only').checked, true);
+  assert.equal(app.run('resultScope'), 'all');
+  assert.equal(app.run('featureFilters.fastStorage'), 'exclude');
+  assert.equal(app.run('featureFilters.goodCondition'), 'include');
   assert.equal(app.elements.get('deep-scan').checked, false);
   assert.equal(app.elements.get('source-mode-manual').checked, true);
 });
